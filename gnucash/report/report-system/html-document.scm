@@ -128,7 +128,7 @@
 ;; returns the html document as a string, I think.
 (define (gnc:html-document-render doc . rest)
   (let ((stylesheet (gnc:html-document-style-sheet doc))
-        (headers? (if (null? rest) #f (if (car rest) #t #f)))
+        (headers? (if (null? rest) #t (if (car rest) #t #f)))
         (style-text (gnc:html-document-style-text doc))
        )
        (if stylesheet
@@ -147,9 +147,8 @@
                                         (gnc:html-document-style-stack doc))
           ;; push it
           (gnc:html-document-push-style doc (gnc:html-document-style doc))
-          (if (not (string-null? title))
-              (gnc:report-render-starting (gnc:html-document-title doc)))
-          (if (not (null? headers?))
+          (gnc:report-render-starting (gnc:html-document-title doc))
+          (if headers?
               (begin
                 ;;This is the only place where <html> appears
                 ;;with the exception of 2 reports:
@@ -161,28 +160,26 @@
                 (push "<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\" />\n")
                 (if style-text
                     (push (list "</style>" style-text "<style type=\"text/css\">\n")))
-                (let ((title (gnc:html-document-title doc)))
-                  (if title
-                      (push (list "</title>" title "<title>\n"))))
-                (push "</head>")
+                (if (not (string-null? title))
+                    (push (list "</title>" title "<title>\n")))
+                (push "</head>")))
                 
-                ;; this lovely little number just makes sure that <body>
-                ;; attributes like bgcolor get included
-                (push ((gnc:html-markup/open-tag-only "body") doc))))
+          ;; this lovely little number just makes sure that <body>
+          ;; attributes like bgcolor get included
+          (push ((gnc:html-markup/open-tag-only "body") doc))
 
           ;; now render the children
           (for-each
            (lambda (child)
-             (begin
                (push (gnc:html-object-render child doc))
                (set! work-done (+ 1 work-done))
-               (gnc:report-percent-done (* 100 (/ work-done work-to-do)))))
+               (gnc:report-percent-done (* 100 (/ work-done work-to-do))))
            objs)
 
-          (if (not (null? headers?))
-              (begin
-                (push "</body>\n")
-                (push "</html>\n")))
+          (push "</body>\n")
+
+          (if headers?
+                (push "</html>\n"))
 
           (gnc:report-finished)
           (gnc:html-document-pop-style doc)
