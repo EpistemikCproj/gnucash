@@ -12,21 +12,13 @@ enable_testing()
 
 # Version number of gnucash
 set (GNUCASH_MAJOR_VERSION 3)
-<<<<<<< HEAD
 set (GNUCASH_MINOR_VERSION 4)
-=======
-set (GNUCASH_MINOR_VERSION 900)
->>>>>>> upstream/master
 set (VERSION "${GNUCASH_MAJOR_VERSION}.${GNUCASH_MINOR_VERSION}")
 set (GNUCASH_LATEST_STABLE_SERIES 3.x)
 
 set (PACKAGE gnucash)
 set (PACKAGE_NAME GnuCash)
-<<<<<<< HEAD
 set (PACKAGE_VERSION 3.4)
-=======
-set (PACKAGE_VERSION 3.900)
->>>>>>> upstream/master
 set (PACKAGE_BUGREPORT "https://bugs.gnucash.org")
 set (PACKAGE_TARNAME ${PACKAGE})
 set (PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
@@ -247,7 +239,7 @@ if (MSVC)
 endif (MSVC)
 
 find_path (LIBINTL_INCLUDE_PATH NAMES libintl.h
-		  PATHS /usr/include /opt/gnome/include)
+      PATHS /usr/include /opt/gnome/include)
 find_library (LIBINTL_LIBRARY NAMES intl)
 
 find_path (LTDL_INCLUDE_PATH NAMES ltdl.h PATHS /usr/include)
@@ -282,7 +274,7 @@ if (${GETTEXT_VERSION_STRING} VERSION_LESS 0.19.6)
 endif ()
 
 find_path (REGEX_INCLUDE_PATH NAMES regex.h
-		  PATHS /usr/include /opt/gnome/include)
+      PATHS /usr/include /opt/gnome/include)
 find_library (REGEX_LIBRARY NAMES regex)
 if (WIN32)
   message(STATUS "Looking for htmlhelp.h and htmlhelp.a")
@@ -388,7 +380,6 @@ if (WITH_OFX)
 #include <stdlib.h>
 #include <string>
 extern time_t ofxdate_to_time_t(const std::string ofxdate);
-
 int main(int argc, char** argv)
 {
     const std::string timestr = \"20160319000000\";
