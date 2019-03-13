@@ -66,7 +66,7 @@
 (export gnc:case-exchange-time-fn)
 (export gnc:sum-collector-commodity)
 (export gnc:sum-collector-stocks)
-(export gnc-commodity-collector-contains-commodity?)
+(export gnc-commodity-collector-contains-commodity?) ;deprecated
 
 ;; options-utilities.scm
 
@@ -692,7 +692,7 @@
 (export gnc:make-number-collector)
 (export gnc:make-commodity-collector)
 (export gnc:commodity-collector-get-negated)
-(export gnc:commodity-collectorlist-get-merged)
+(export gnc:commodity-collectorlist-get-merged) ;deprecated
 (export gnc-commodity-collector-commodity-count)
 (export gnc:account-get-balance-at-date)
 (export gnc:account-get-balances-at-dates)

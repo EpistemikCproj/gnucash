@@ -3764,12 +3764,13 @@ gnc_quartz_should_quit (GtkosxApplication *theApp, GncMainWindow *window)
     QofSession *session;
     gboolean needs_save;
 
-    if (!gnc_current_session_exist() ||
-        !gnc_main_window_all_finish_pending() ||
+    if (gnc_current_session_exist())
+        return FALSE;
+    if (!gnc_main_window_all_finish_pending() ||
         gnc_file_save_in_progress())
 
     {
-        return FALSE;
+        return TRUE;
     }
     session = gnc_get_current_session();
     needs_save = qof_book_session_not_saved(qof_session_get_book(session)) &&
@@ -4535,31 +4536,18 @@ gnc_main_window_cmd_help_about (GtkAction *action, GncMainWindow *window)
         gchar **authors = get_file_strsplit("AUTHORS");
         gchar **documenters = get_file_strsplit("DOCUMENTERS");
         gchar *license = get_file("LICENSE");
-        gchar *version = NULL;
-        gchar *vcs = NULL;
         GtkIconTheme *icon_theme = gtk_icon_theme_get_default ();
         GdkPixbuf *logo = gtk_icon_theme_load_icon (icon_theme,
                                                     GNC_ICON_APP,
                                                     128,
                                                     GTK_ICON_LOOKUP_USE_BUILTIN,
                                                     NULL);
-
-#ifdef GNC_VCS
-        vcs = GNC_VCS " ";
-#else
-        vcs = "";
-#endif
-
-        /* Allow builder to override the build id (eg distributions may want to
-         * print an package source version number (rpm, dpkg,...) instead of our git ref */
-        if (g_strcmp0("", GNUCASH_BUILD_ID) != 0)
-            version = g_strdup_printf ("%s: %s\n%s: %s\nFinance::Quote: %s", _("Version"), VERSION,
-                                       _("Build ID"), GNUCASH_BUILD_ID,
-                                       gnc_quote_source_fq_version () ? gnc_quote_source_fq_version () : "-");
-        else
-            version = g_strdup_printf ("%s: %s\n%s: %s%s (%s)\nFinance::Quote: %s", _("Version"), VERSION,
-                                       _("Build ID"), vcs, GNC_VCS_REV, GNC_VCS_REV_DATE,
-                                       gnc_quote_source_fq_version () ? gnc_quote_source_fq_version () : "-");
+        gchar *version = g_strdup_printf ("%s: %s\n%s: %s\nFinance::Quote: %s",
+                                          _("Version"), gnc_version(),
+                                          _("Build ID"), gnc_build_id(),
+                                          gnc_quote_source_fq_version ()
+                                           ? gnc_quote_source_fq_version ()
+                                           : "-");
         priv->about_dialog = gtk_about_dialog_new ();
         g_object_set (priv->about_dialog,
                   "authors", authors,
@@ -4573,10 +4561,10 @@ gnc_main_window_cmd_help_about (GtkAction *action, GncMainWindow *window)
           * Enter your name or that of your team and an email contact for feedback.
           * The string can have multiple rows, so you can also add a list of
           * contributors. */
-                  "translator-credits", _("translator_credits"),
+                  "translator-credits", _("translator-credits"),
                   "version", version,
                   "website", PACKAGE_URL,
-                  "website_label", _("Visit the GnuCash website."),
+                  "website-label", _("Visit the GnuCash website."),
                   NULL);
 
         g_free(version);
