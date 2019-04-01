@@ -1,0 +1,1 @@
+/home/marksa/dev/git/fork/gnucash/libgnucash/gnc-module/test/mod-baz/gnucash/baz.scm

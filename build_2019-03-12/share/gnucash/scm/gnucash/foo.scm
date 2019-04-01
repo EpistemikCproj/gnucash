@@ -1,0 +1,1 @@
+/home/marksa/dev/git/fork/gnucash/libgnucash/gnc-module/test/mod-foo/gnucash/foo.scm

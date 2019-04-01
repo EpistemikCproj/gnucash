@@ -1,0 +1,2 @@
+
+cmake -DCMAKE_INSTALL_PREFIX=/opt/gnucash -DCMAKE_PREFIX_PATH=/opt/gnucash -DPYTHON_EXECUTABLE=/usr/bin/python3 -DPYTHON_INCLUDE_DIR=/usr/include/python3.6m -DPYTHON_LIBRARY=/usr/local/lib/libpython3.so -DWITH_PYTHON=ON -DGTEST_ROOT=/usr/src/googletest/googletest -DGMOCK_ROOT=/usr/src/googletest/googlemock ..

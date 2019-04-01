@@ -1,0 +1,43 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-account-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-address-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-bill-term-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-book-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-budget-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-commodity-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-customer-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-employee-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-entry-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-freqspec-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-invoice-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-job-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-lot-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-order-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-owner-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-pricedb-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-recurrence-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-schedxaction-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-tax-table-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-transaction-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-vendor-xml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-xml-backend.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/gnc-xml-helper.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/io-example-account.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/io-gncxml-gen.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/io-gncxml-v1.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/io-gncxml-v2.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/io-utils.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/sixtp-dom-generators.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/sixtp-dom-parsers.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/sixtp-stack.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/sixtp-to-dom-parser.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/sixtp-utils.cpp.o"
+  "CMakeFiles/gnc-backend-xml-utils.dir/sixtp.cpp.o"
+  "../../../lib/libgnc-backend-xml-utils.pdb"
+  "../../../lib/libgnc-backend-xml-utils.so"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/gnc-backend-xml-utils.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

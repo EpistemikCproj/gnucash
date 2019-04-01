@@ -1,0 +1,18 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/marksa/dev/git/fork/gnucash/borrowed/jenny/jenny.c
+stdio.h
+-
+stddef.h
+-
+stdlib.h
+-
+string.h
+-
+

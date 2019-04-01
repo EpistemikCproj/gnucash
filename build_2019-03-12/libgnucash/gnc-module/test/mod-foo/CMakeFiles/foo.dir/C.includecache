@@ -1,0 +1,16 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/marksa/dev/git/fork/gnucash/libgnucash/gnc-module/test/mod-foo/foo.c
+stdio.h
+-
+foo.h
+/home/marksa/dev/git/fork/gnucash/libgnucash/gnc-module/test/mod-foo/foo.h
+
+/home/marksa/dev/git/fork/gnucash/libgnucash/gnc-module/test/mod-foo/foo.h
+

@@ -1,0 +1,1 @@
+/usr/bin/cc -fPIC -Wno-error=deprecated-declarations -std=gnu11 -Wno-error=parentheses -Werror -Wdeclaration-after-statement -Wno-pointer-sign -Wall -Wmissing-prototypes -Wmissing-declarations -Wno-unused   -shared -Wl,-soname,libfoo.so -o ../../../../lib/gnucash/test/libfoo.so CMakeFiles/foo.dir/foo.c.o 

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libgncmod-test-engine.a  CMakeFiles/gncmod-test-engine.dir/gncmod-test-engine.c.o CMakeFiles/gncmod-test-engine.dir/test-engine-stuff.cpp.o
+/usr/bin/ranlib libgncmod-test-engine.a

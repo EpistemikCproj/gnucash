@@ -1,0 +1,2 @@
+/usr/bin/ar qc libtest-core.a  CMakeFiles/test-core.dir/test-stuff.c.o CMakeFiles/test-core.dir/unittest-support.c.o
+/usr/bin/ranlib libtest-core.a

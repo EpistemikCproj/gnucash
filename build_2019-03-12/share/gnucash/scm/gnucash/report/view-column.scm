@@ -1,0 +1,1 @@
+/home/marksa/dev/git/fork/gnucash/gnucash/report/utility-reports/view-column.scm
