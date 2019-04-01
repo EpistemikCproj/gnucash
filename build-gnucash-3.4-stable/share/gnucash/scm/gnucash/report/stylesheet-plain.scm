@@ -1,1 +1,0 @@
-/home/marksa/dev/git/fork/gnucash/gnucash/report/stylesheets/stylesheet-plain.scm

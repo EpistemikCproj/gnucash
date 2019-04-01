@@ -1,1 +1,0 @@
-/usr/bin/cc -Wno-error=deprecated-declarations -std=gnu11 -Wno-error=parentheses -Werror -Wdeclaration-after-statement -Wno-pointer-sign -Wall -Wmissing-prototypes -Wmissing-declarations -Wno-unused   -rdynamic CMakeFiles/test-link-module-register-gnome.dir/test-link-module.c.o  -o ../../../../bin/test-link-module-register-gnome 

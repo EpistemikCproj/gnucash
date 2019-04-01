@@ -1,1 +1,0 @@
-/home/marksa/dev/git/fork/gnucash/libgnucash/gnc-module/test/test-gnc-module-scm-dynload.scm
