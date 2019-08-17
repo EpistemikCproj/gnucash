@@ -55,11 +55,11 @@ endif()
 
 set(test_core_SCHEME unittest-support.scm)
 
-set(GUILE_OUTPUT_DIR   gnucash)
+set(GUILE_OUTPUT_DIR   tests)
 set(GUILE_DEPENDS      test-core-guile)
 
 
-gnc_add_scheme_targets(scm-test-core
+gnc_add_scheme_test_targets(scm-test-core
   ${test_core_SCHEME}
   ${GUILE_OUTPUT_DIR}
   "${GUILE_DEPENDS}"
@@ -68,8 +68,13 @@ gnc_add_scheme_targets(scm-test-core
 
 add_dependencies(check scm-test-core)
 
+# Module interfaces deprecated in 4.x, will be removed for 5.x
+gnc_add_scheme_deprecated_module ("gnucash unittest-support" "tests unittest-support" "scm-test-core" "")
+
+
 if(NOT GTEST_SHARED_LIB)
-  set (lib_gtest_SOURCES ${GTEST_SRC_DIR}/src/gtest-all.cc)
+  # in contrast to GoogleTest build system libraries libgtest.a and libgtest_main.a
+  # are combined to one library libtest.a here
   add_library(gtest STATIC  ${lib_gtest_SOURCES})
   if(APPLE)
     target_compile_options(gtest PRIVATE -Wno-missing-prototypes)

@@ -148,7 +148,6 @@
 (export gnc:options-get-default-section)
 (export gnc:options-copy-values)
 (export gnc:send-options)
-(export gnc:save-options)
 
 (define (gnc:option-get-value book category key)
   ;;Access an option directly
@@ -227,12 +226,12 @@
 (export gnc:reldate-get-string)
 (export gnc:reldate-get-desc)
 (export gnc:reldate-get-fn)
-(export gnc:make-reldate-hash)
-(export gnc:reldate-string-db)
-(export gnc:relative-date-values)
-(export gnc:relative-date-hash)
+(export gnc:make-reldate-hash)          ;deprecate
+(export gnc:reldate-string-db)          ;deprecate
+(export gnc:relative-date-values)       ;deprecate
+(export gnc:relative-date-hash)         ;deprecate
 (export gnc:get-absolute-from-relative-date)
-(export gnc:get-relative-date-strings)
+(export gnc:get-relative-date-strings)  ;deprecate
 (export gnc:get-relative-date-string)
 (export gnc:get-relative-date-desc)
 (export gnc:get-start-cal-year)
@@ -264,29 +263,13 @@
 (export gnc:get-start-next-year)
 (export gnc:get-three-months-ahead)
 
-;; hooks 
-(export gnc:hook-run-danglers)	    	;; from hooks.scm- deprecated
-(re-export gnc-hook-add-scm-dangler)
-(re-export HOOK-REPORT)
-
-;; simple-obj
-(export make-simple-class)
-(export simple-obj-getter)
-(export simple-obj-setter)
-(export simple-obj-print)
-(export simple-obj-to-list)
-(export simple-obj-from-list)
-(export make-simple-obj)
-
 (define gnc:*kvp-option-path* (list KVP-OPTION-PATH))
 (export gnc:*kvp-option-path*)
 
-(load-from-path "c-interface")
-(load-from-path "options")
-(load-from-path "hooks")
-(load-from-path "prefs")
-(load-from-path "date-utilities")
-(load-from-path "simple-obj")
+(load-from-path "gnucash/app-utils/c-interface")
+(load-from-path "gnucash/app-utils/options")
+(load-from-path "gnucash/app-utils/prefs")
+(load-from-path "gnucash/app-utils/date-utilities")
 
 ;; Business options
 (define gnc:*business-label* (N_ "Business"))
@@ -335,5 +318,5 @@
 
 (export gnc:*option-section-budgeting* gnc:*option-name-default-budget*)
 
-(load-from-path "business-options")
-(load-from-path "business-prefs")
+(load-from-path "gnucash/app-utils/business-options")
+(load-from-path "gnucash/app-utils/business-prefs")

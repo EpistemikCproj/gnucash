@@ -11,9 +11,9 @@ gnc_add_test(test-link-module-tax-us test-link-module.c
 #  scm-gnc-module
 #)
 #
-#gnc_add_scheme_targets(scm-test-load-tax-us-module
+#gnc_add_scheme_test_targets(scm-test-load-tax-us-module
 #  "test-load-tax-us-module.scm"
-#  "gnucash/reports"
+#  "tests"
 #  "${GUILE_DEPENDS}"
 #  FALSE
 #)

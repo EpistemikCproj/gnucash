@@ -237,7 +237,7 @@ else()
   set(BCRYPT "")
 endif()
 
-target_link_libraries(gncmod-engine gnc-core-utils gnc-module ${Boost_DATE_TIME_LIBRARIES}  ${Boost_REGEX_LIBRARIES} ${BCRYPT} ${REGEX_LDFLAGS} ${GMODULE_LDFLAGS} ${GLIB2_LDFLAGS} ${GOBJECT_LDFLAGS} ${GUILE_LDFLAGS})
+target_link_libraries(gncmod-engine gnc-core-utils gnc-module ${Boost_DATE_TIME_LIBRARIES}  ${Boost_REGEX_LIBRARIES}  ${ICU4C_I18N_LDFLAGS} ${BCRYPT} ${REGEX_LDFLAGS} ${GMODULE_LDFLAGS} ${GLIB2_LDFLAGS} ${GOBJECT_LDFLAGS} ${GUILE_LDFLAGS})
 
 target_compile_definitions (gncmod-engine PRIVATE -DG_LOG_DOMAIN=\"gnc.engine\")
 
@@ -298,9 +298,9 @@ gnc_add_scheme_targets(scm-engine-0
 
 gnc_add_scheme_targets(scm-engine-1
   "${engine_SCHEME_1}"
-  ""
+  "gnucash/engine"
   "scm-engine-0;${GUILE_DEPENDS}"
-  FALSE
+  TRUE
 )
 
 add_custom_target(scm-engine ALL DEPENDS scm-engine-1 scm-engine-0)

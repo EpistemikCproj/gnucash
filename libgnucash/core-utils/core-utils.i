@@ -56,6 +56,12 @@ void
 %newobject gnc_path_get_bindir;
 gchar * gnc_path_get_bindir(void);
 
+%newobject gnc_path_get_scmdir;
+gchar * gnc_path_get_scmdir(void);
+
+%newobject gnc_path_get_reportsdir;
+gchar * gnc_path_get_reportsdir(void);
+
 %newobject gnc_path_get_stdreportsdir;
 gchar * gnc_path_get_stdreportsdir(void);
 
@@ -65,8 +71,13 @@ gchar * gnc_path_find_localized_html_file(const gchar *);
 %newobject gnc_build_userdata_path;
 gchar * gnc_build_userdata_path(const gchar *);
 
+%newobject gnc_file_path_absolute;
+gchar *gnc_file_path_absolute (const gchar *, const gchar *);
+
+gchar * gnc_build_scm_path(const gchar *);
 gchar * gnc_build_report_path(const gchar *);
 gchar * gnc_build_stdreports_path(const gchar *);
+gchar * gnc_build_reports_path(const gchar *);
 
 void gnc_scm_log_warn(const gchar *);
 void gnc_scm_log_error(const gchar *);
@@ -83,6 +94,9 @@ gchar * gnc_locale_from_utf8(const gchar *);
 gchar * gnc_locale_to_utf8(const gchar *);
 
 const char * gnc_locale_default_iso_currency_code (void);
+
+%newobject gnc_locale_name;
+gchar *gnc_locale_name (void);
 
 #if defined(SWIGGUILE)
 %rename ("gnc-utf8?") wrap_gnc_utf8_validate;

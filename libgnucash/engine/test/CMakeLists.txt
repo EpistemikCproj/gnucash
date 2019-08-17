@@ -99,6 +99,7 @@ set(gtest_qof_LIBS
   ${GOBJECT_LDFLAGS}
   ${GMODULE_LDFLAGS}
   ${GTHREAD_LDFLAGS}
+  ${ICU4C_I18N_LDFLAGS}
   ${Boost_LIBRARIES}
   ${GTEST_LIB})
 
@@ -122,30 +123,26 @@ endif (WIN32)
 
 set(test_gnc_guid_SOURCES
   ${MODULEPATH}/guid.cpp
-  test-gnc-guid.cpp
-  ${GTEST_SRC})
+  test-gnc-guid.cpp)
 gnc_add_test(test-gnc-guid "${test_gnc_guid_SOURCES}"
   gtest_engine_INCLUDES gtest_old_engine_LIBS)
 
 set(test_kvp_value_SOURCES
   ${MODULEPATH}/kvp-value.cpp
   test-kvp-value.cpp
-  test-kvp-frame.cpp
-  ${GTEST_SRC})
+  test-kvp-frame.cpp)
 gnc_add_test(test-kvp-value "${test_kvp_value_SOURCES}"
   gtest_engine_INCLUDES gtest_old_engine_LIBS)
 
 set(test_qofsession_SOURCES
   ${MODULEPATH}/qofsession.cpp
-  test-qofsession.cpp
-  ${GTEST_SRC})
+  test-qofsession.cpp)
 gnc_add_test(test-qofsession "${test_qofsession_SOURCES}"
   gtest_engine_INCLUDES gtest_old_engine_LIBS)
 
 set(test_gnc_int128_SOURCES
   ${MODULEPATH}/gnc-int128.cpp
-  gtest-gnc-int128.cpp
-  ${GTEST_SRC})
+  gtest-gnc-int128.cpp)
 gnc_add_test(test-gnc-int128 "${test_gnc_int128_SOURCES}"
   gtest_engine_INCLUDES gtest_qof_LIBS)
 
@@ -159,8 +156,7 @@ set(test_gnc_rational_SOURCES
   ${MODULEPATH}/qoflog.cpp
   ${CMAKE_SOURCE_DIR}/libgnucash/core-utils/gnc-locale-utils.cpp
   ${gtest_engine_win32_SOURCES}
-  gtest-gnc-rational.cpp
-  ${GTEST_SRC})
+  gtest-gnc-rational.cpp)
 
 gnc_add_test(test-gnc-rational "${test_gnc_rational_SOURCES}"
   gtest_engine_INCLUDES gtest_qof_LIBS)
@@ -175,15 +171,13 @@ set(test_gnc_numeric_SOURCES
   ${MODULEPATH}/qoflog.cpp
   ${CMAKE_SOURCE_DIR}/libgnucash/core-utils/gnc-locale-utils.cpp
   ${gtest_engine_win32_SOURCES}
-  gtest-gnc-numeric.cpp
-  ${GTEST_SRC})
+  gtest-gnc-numeric.cpp)
 gnc_add_test(test-gnc-numeric "${test_gnc_numeric_SOURCES}"
   gtest_engine_INCLUDES gtest_qof_LIBS)
 
 set(test_gnc_timezone_SOURCES
   ${MODULEPATH}/gnc-timezone.cpp
-  gtest-gnc-timezone.cpp
-  ${GTEST_SRC})
+  gtest-gnc-timezone.cpp)
 gnc_add_test(test-gnc-timezone "${test_gnc_timezone_SOURCES}"
   gtest_engine_INCLUDES gtest_old_engine_LIBS)
 
@@ -194,20 +188,17 @@ set(test_gnc_datetime_SOURCES
   ${MODULEPATH}/qoflog.cpp
   ${CMAKE_SOURCE_DIR}/libgnucash/core-utils/gnc-locale-utils.cpp
   ${gtest_engine_win32_SOURCES}
-  gtest-gnc-datetime.cpp
-  ${GTEST_SRC})
+  gtest-gnc-datetime.cpp)
 gnc_add_test(test-gnc-datetime "${test_gnc_datetime_SOURCES}"
   gtest_engine_INCLUDES gtest_qof_LIBS)
 
 set(test_import_map_SOURCES
-  gtest-import-map.cpp
-  ${GTEST_SRC})
+  gtest-import-map.cpp)
 gnc_add_test(test-import-map "${test_import_map_SOURCES}"
   gtest_engine_INCLUDES gtest_old_engine_LIBS)
 
 set(test_qofquerycore_SOURCES
-gtest-qofquerycore.cpp
-${GTEST_SRC})
+gtest-qofquerycore.cpp)
 gnc_add_test(test-qofquerycore "${test_qofquerycore_SOURCES}"
   gtest_engine_INCLUDES gtest_old_engine_LIBS)
 
@@ -219,45 +210,57 @@ gnc_add_test_with_guile(test-scm-query test-scm-query.cpp ENGINE_TEST_INCLUDE_DI
 
 
 set(engine_test_SCHEME
-  test-account.scm
   test-create-account.scm
-  test-split.scm
   )
 
 #list(APPEND engine_test_SCHEME  test-scm-query-import.scm) Fails
 
 set(GUILE_DEPENDS      scm-gnc-module scm-app-utils scm-scm scm-engine)
 
-gnc_add_scheme_targets(scm-test-engine-extras
-  "test-extras.scm"
-  "gnucash/engine/test/"
+gnc_add_scheme_test_targets(scm-test-engine-extras
+  "test-engine-extras.scm"
+  "tests"
   "${GUILE_DEPENDS}"
   FALSE
   )
 
 if (HAVE_SRFI64)
-  gnc_add_scheme_targets (scm-srfi64-extras
+  gnc_add_scheme_test_targets (scm-srfi64-extras
     "srfi64-extras.scm"
-    "gnucash/engine/test/"
-    "${GUILE_DEPENDS}"
+    "tests"
+    "${GUILE_DEPENDS};scm-test-engine-extras;scm-srfi64-extras"
     FALSE
     )
 
-  set(srfi64_extras_SCHEME_DIST
-    srfi64-extras.scm
+  gnc_add_scheme_deprecated_module ("gnucash engine test srfi64-extras" "tests srfi64-extras" "scm-srfi64-extras" "")
+
+  set (scm_tests_with_srfi64_SOURCES
+    test-business-core.scm
     )
 
+  gnc_add_scheme_test_targets (scm-test-with-srfi64
+    "${scm_tests_with_srfi64_SOURCES}"
+    "tests"
+    "${GUILE_DEPENDS};scm-test-engine-extras;scm-srfi64-extras;gncmod-engine"
+    FALSE
+    )
+
+    gnc_add_scheme_tests ("${scm_tests_with_srfi64_SOURCES}")
 endif (HAVE_SRFI64)
 
-gnc_add_scheme_targets(scm-test-engine
+gnc_add_scheme_test_targets(scm-test-engine
   "${engine_test_SCHEME}"
-  ""
+  "tests"
   "${GUILE_DEPENDS};scm-test-engine-extras"
   FALSE
   )
 
 add_dependencies(check scm-test-engine)
 gnc_add_scheme_tests("${engine_test_SCHEME}")
+
+# Module interfaces deprecated in 4.x, will be removed for 5.x
+gnc_add_scheme_deprecated_module ("gnucash engine test test-extras" "tests test-engine-extras" "scm-test-engine-extras" "")
+
 
 set(test_engine_SOURCES_DIST
         dummy.cpp
@@ -313,11 +316,11 @@ set(test_engine_SOURCES_DIST
 )
 
 set(test_engine_SCHEME_DIST
-        test-account.scm
+        srfi64-extras.scm
         test-create-account.scm
-        test-extras.scm
+        test-engine-extras.scm
         test-scm-query-import.scm
-        test-split.scm
+        test-business-core.scm
 )
 
 set(test_engine_EXTRA_DIST
@@ -325,5 +328,4 @@ set(test_engine_EXTRA_DIST
 )
 
 set_dist_list(test_engine_DIST CMakeLists.txt
-        ${srfi64_extras_SCHEME_DIST}
         ${test_engine_SOURCES_DIST} ${test_engine_SCHEME_DIST} ${test_engine_EXTRA_DIST})

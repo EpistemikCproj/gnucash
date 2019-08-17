@@ -27,11 +27,14 @@
 
 (use-modules (gnucash core-utils))
 
+(eval-when (compile load eval expand)
+  (load-extension "libgncmod-engine" "scm_init_sw_engine_module"))
+(use-modules (sw_engine))
+
 ;; Load the srfis (eventually, we should see where these are needed
 ;; and only have the use-modules statements in those files).
 (use-modules (srfi srfi-1))
 (use-modules (srfi srfi-8))
-
 (use-modules (gnucash gnc-module))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -43,6 +46,7 @@
 (export gnc:msg)
 (export gnc:debug)
 (export addto!)
+(export sort-and-delete-duplicates)
 
 ;; Do this stuff very early -- but other than that, don't add any
 ;; executable code until the end of the file if you can help it.
@@ -50,12 +54,6 @@
 (debug-enable 'backtrace)
 (read-enable 'positions)
 (debug-set! stack    200000)
-
-;; Initalialize localization, otherwise reports may output
-;; invalid characters
-(setlocale LC_ALL "")
-
-;;;; Status output functions.
 
 (define (strify items)
   (string-join (map (lambda (x) (format #f "~A" x)) items) ""))
@@ -69,12 +67,24 @@
 (define (gnc:msg . items)
   (gnc-scm-log-msg (strify items)))
 
-(define (gnc:debug . items)
-  (gnc-scm-log-debug (strify items)))
+;; this definition of gnc:debug is different from others because we
+;; want to check loglevel is debug *once* at gnc:debug definition
+;; instead of every call to gnc:debug. if loglevel isn't debug then
+;; gnc:debug becomes a NOOP.
+(define gnc:debug
+  (cond
+   ((qof-log-check "gnc" QOF-LOG-DEBUG)
+    (display "debugging enabled\n")
+    (lambda items (gnc-scm-log-debug (strify items))))
 
+   (else
+    (lambda items #f))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; the following functions are initialized to log message to tracefile
 ;; and will be redefined in UI initialization to display dialog
 ;; messages
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-public (gnc:gui-warn str1 str2) (gnc:warn str1))
 (define-public (gnc:gui-error str1 str2) (gnc:error str1))
 (define-public (gnc:gui-msg str1 str2) (gnc:msg str1))
@@ -83,6 +93,51 @@
   (syntax-rules ()
     ((addto! alist element)
      (set! alist (cons element alist)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; pair of utility functions for use with guile-json which requires
+;; lists converted vectors to save as json arrays. traverse list
+;; converting into vectors, and vice versa.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define-public (traverse-list->vec lst)
+  (cond
+   ((list? lst) (list->vector (map traverse-list->vec lst)))
+   (else lst)))
+
+(define-public (traverse-vec->list vec)
+  (cond
+   ((vector? vec) (map traverse-vec->list (vector->list vec)))
+   (else vec)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; general and efficent string-replace-substring function, based on
+;; function designed by Mark H Weaver, core guile developer. avoids
+;; string-append which will constantly build new strings. augmented
+;; with start and end indices; will selective choose to replace
+;; substring if start-idx <= index <= end-idx
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define* (string-replace-substring s substr replacement #:optional
+                                   (start 0)
+                                   (end (string-length s))
+                                   (start-idx #f)
+                                   (end-idx #f))
+  (let ((substr-length (string-length substr))
+        (start-idx (or start-idx 0))
+        (end-idx (or end-idx +inf.0)))
+    (if (zero? substr-length)
+        (error "string-replace-substring: empty substr")
+        (let loop ((start start)
+                   (i 0)
+                   (pieces (list (substring s 0 start))))
+          (let ((idx (string-contains s substr start end)))
+            (if idx
+                (loop (+ idx substr-length)
+                      (1+ i)
+                      (cons* (if (<= start-idx i end-idx) replacement substr)
+                             (substring s start idx)
+                             pieces))
+                (string-concatenate-reverse (cons (substring s start)
+                                                  pieces))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  gnc:substring-replace
@@ -95,14 +150,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-public (gnc:substring-replace s1 s2 s3)
-  (let ((s2len (string-length s2)))
-    (let loop ((start1 0)
-               (i (string-contains s1 s2)))
-      (if i
-          (string-append (substring s1 start1 i)
-                         s3
-                         (loop (+ i s2len) (string-contains s1 s2 (+ i s2len))))
-          (substring s1 start1)))))
+  (string-replace-substring s1 s2 s3))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -111,7 +159,7 @@
 ;;  start: from which occurrence onwards the replacement shall start
 ;;  end-after: max. number times the replacement should executed
 ;;
-;;  Example: (gnc:substring-replace-from-to "foobarfoobarfoobar" "bar" "xyz" 2 2)
+;;  Example: (gnc:substring-replace-from-to "foobarfoobarfoobar" "bar" "xyz" 2 1)
 ;;           returns "foobarfooxyzfoobar".
 ;;
 ;; start=1 and end-after<=0 will call gnc:substring-replace (replace all)
@@ -119,64 +167,30 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-public (gnc:substring-replace-from-to s1 s2 s3 start end-after)
-  (let (
-         (s2len (string-length s2))
-       )
+  (string-replace-substring
+   s1 s2 s3 0 (string-length s1) (max 0 (1- start))
+   (and (positive? end-after) (+ (max 0 (1- start)) (1- end-after)))))
 
-    ;; if start<=0 and end<=0 => don't do anything
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; avoid using strftime, still broken in guile-2.2. see explanation at
+;; https://www.mail-archive.com/bug-guile@gnu.org/msg09778.html
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(let ((strftime-old strftime))
+  (set! strftime
+    (lambda args
+      (gnc:warn "strftime may be buggy. use gnc-print-time64 instead.")
+      (apply strftime-old args))))
 
-    (if (and
-          (<= start 0)
-          (<= end-after 0)
-        )
-      s1
-    )
-
-    ;; else
-    (begin
-
-      ;; normalize start
-      (if (= start 0)
-        (set! start 1)
-      )
-      ;; start=1 and end<=0 => replace all
-      ;; call gnc:substring-replace for that
-      (if (and (= start 1) (<= end-after 0))
-        (gnc:substring-replace s1 s2 s3)
-
-        ;; else
-        (begin
-          (let loop (
-                      (start1 0)
-                      (i (string-contains s1 s2))
-                    )
-            (if i
-              (begin
-                (set! start (- start 1))
-                (if (or
-                        (> start 0)
-                        (and (> end-after 0)
-                             (<= (+ end-after start) 0)
-                        )
-                    )
-                  (string-append
-                    (substring s1 start1 i)
-                    s2 ;; means: do not change anything
-                    (loop (+ i s2len) (string-contains s1 s2 (+ i s2len)))
-                  )
-                  (string-append
-                    (substring s1 start1 i)
-                    s3
-                    (loop (+ i s2len) (string-contains s1 s2 (+ i s2len)))
-                  )
-                )
-              )
-              ;; else
-              (substring s1 start1)
-            )
-          )
-        )
-      )
-    )
-  )
-)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; a basic sort-and-delete-duplicates. because delete-duplicates
+;; usually run in O(N^2) and if the list must be sorted, it's more
+;; efficient to sort first then delete adjacent elements. guile-2.0
+;; uses quicksort internally.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define* (sort-and-delete-duplicates lst < #:optional (= =))
+  (let lp ((lst (sort lst <)) (result '()))
+    (cond
+     ((null? lst) '())
+     ((null? (cdr lst)) (reverse (cons (car lst) result)))
+     ((= (car lst) (cadr lst)) (lp (cdr lst) result))
+     (else (lp (cdr lst) (cons (car lst) result))))))
