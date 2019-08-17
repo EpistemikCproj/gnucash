@@ -495,32 +495,27 @@
 ;; user.  This class simply maps its contents to the html-table.
 ;; 
 
+(use-modules (srfi srfi-9))
+
 ;; this is to work around a bug in the HTML export sytmem
 ;; which causes COLSPAN= attributes not to be exported (!!)
-(define gnc:colspans-are-working-right #f)
+(define gnc:colspans-are-working-right
+  ;; should be deprecated
+  #f)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  <html-acct-table> class
 ;;  utility class for generating account tables
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define <html-acct-table>
-  (make-record-type "<html-acct-table>"
-		    '(matrix ;; an html-table
-		      env    ;; an alist
-		      )))
-
-(define gnc:html-acct-table? 
-  (record-predicate <html-acct-table>))
-
-(define gnc:_make-html-acct-table_
-  (record-constructor <html-acct-table>))
+(define-record-type <html-acct-table>
+  (gnc:_make-html-acct-table_ matrix env)
+  gnc:html-acct-table?
+  (matrix gnc:_html-acct-table-matrix_ gnc:_html-acct-table-set-matrix!_)
+  (env gnc:_html-acct-table-env_ gnc:_html-acct-table-set-env!_))
 
 (define (gnc:make-html-acct-table)
-  (gnc:_make-html-acct-table_
-   (gnc:make-html-table) ;; matrix
-   #f                    ;; env
-   ))
+  (gnc:_make-html-acct-table_ (gnc:make-html-table) #f))
 
 (define (gnc:make-html-acct-table/env env)
   (let ((acct-table (gnc:make-html-acct-table)))
@@ -535,18 +530,6 @@
     (gnc:_html-acct-table-set-env!_ acct-table env)
     (gnc:html-acct-table-add-accounts! acct-table accts)
     acct-table))
-
-(define gnc:_html-acct-table-matrix_
-  (record-accessor <html-acct-table> 'matrix))
-
-(define gnc:_html-acct-table-set-matrix!_
-  (record-modifier <html-acct-table> 'matrix))
-
-(define gnc:_html-acct-table-env_
-  (record-accessor <html-acct-table> 'env))
-
-(define gnc:_html-acct-table-set-env!_
-  (record-modifier <html-acct-table> 'env))
 
 ;; some useful predicates to export
 (define (gnc:account-code-less-p a b)
@@ -606,7 +589,7 @@
 		   (if (equal? pred #t) gnc:account-code-less-p pred)))
 	 (start-date (get-val env 'start-date))
 	 (end-date (or (get-val env 'end-date)
-		       (cons 'absolute (cons (current-time) 0))))
+		       (gnc:get-today)))
 	 (report-commodity (or (get-val env 'report-commodity)
 			       (gnc-default-report-currency)))
          ;; BUG: other code expects a real function here, maybe
@@ -928,14 +911,6 @@
     (traverse-accounts! toplvl-accts 0 0
                         (calculate-balances accounts start-date end-date get-balance-fn))
     
-    ;; set the column-header colspan
-    (if gnc:colspans-are-working-right
-	(if (gnc:html-table-cell? column-header)
-	    (gnc:html-table-cell-set-colspan! column-header
-					      (+ disp-depth-reached 1 indent))
-	    )
-	)
-    
     ;; now set the account-colspan entries
     ;; he he... (let ((x 0)) (while (< x 5) (display x) (set! x (+ x 1))))
     ;; now I know how to loop in scheme... yay!
@@ -989,6 +964,7 @@
   (gnc:html-table-num-rows (gnc:_html-acct-table-matrix_ acct-table)))
 
 (define (gnc:html-acct-table-num-cols acct-table)
+  (issue-deprecation-warning "gnc:html-acct-table-num-cols is unused.")
   (- (gnc:html-table-num-columns (gnc:_html-acct-table-matrix_ acct-table)) 1))
 
 (define (gnc:html-acct-table-get-cell acct-table row col)
@@ -1015,6 +991,7 @@
   (gnc:html-acct-table-set-cell! acct-table row -1 env))
 
 (define (gnc:html-acct-table-append-row! acct-table newrow)
+  (issue-deprecation-warning "gnc:html-acct-table-append-row! is unused.")
   (gnc:html-table-append-row!
    (gnc:_html-acct-table-matrix_ acct-table)
    (map
@@ -1022,6 +999,7 @@
     newrow)))
 
 (define (gnc:html-acct-table-prepend-row! acct-table newrow)
+  (issue-deprecation-warning "gnc:html-acct-table-prepend-row! is unused.")
   (gnc:html-table-prepend-row!
    (gnc:_html-acct-table-matrix_ acct-table)
    (map
@@ -1029,6 +1007,7 @@
     newrow)))
 
 (define (gnc:html-acct-table-append-col! acct-table newcol)
+  (issue-deprecation-warning "gnc:html-acct-table-append-col! is unused.")
   (gnc:html-table-append-col!
    (gnc:_html-acct-table-matrix_ acct-table)
    (map
@@ -1036,6 +1015,7 @@
     newcol)))
 
 (define (gnc:html-acct-table-prepend-col! acct-table newrow)
+  (issue-deprecation-warning "gnc:html-acct-table-prepend-col! is unused.")
   (gnc:html-table-prepend-col!
    (gnc:_html-acct-table-matrix_ acct-table)
    (map
@@ -1043,15 +1023,14 @@
     newcol)))
 
 (define (gnc:html-acct-table-remove-last-row! acct-table)
+  (issue-deprecation-warning "gnc:html-acct-table-remove-last-row! is unused.")
   (gnc:html-table-remove-last-row! (gnc:_html-acct-table-matrix_ acct-table)))
-
-;; don't think we need this.
-;;(define (gnc:identity i) i)
 
 (define (gnc:html-acct-table-render acct-table doc)
   ;; this will be used if we ever decide to let the utility object
   ;; render a document by calling thunks registered in the row-envs...
   ;; but, for now, this (optional) feature is left unimplemented...
+  (issue-deprecation-warning "gnc:html-acct-table-render is unused.")
   #f
   )
 
@@ -1060,9 +1039,10 @@
 ;; 
 
 (define (gnc:html-make-nbsps n)
-  (if (> n 0)
-      (string-append "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" (gnc:html-make-nbsps (- n 1)))
-      ""))
+  (let lp ((n n) (res '()))
+    (if (positive? n)
+        (lp (1- n) (cons "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" res))
+        (string-join res ""))))
 
 ;; Stylesheets define the following cell styles which these functions
 ;; use: "text-cell" "total-label-cell" "number-cell"
@@ -1090,13 +1070,9 @@
          amount-colspan    ;; defaults to one
          amount-markup)    ;; optional
   (let* ((lbl-depth (or label-depth 0))
-	 (lbl-colspan (if gnc:colspans-are-working-right
-			  (or label-colspan 1)
-			  1))
+	 (lbl-colspan 1)
 	 (amt-depth (or amount-depth (+ lbl-depth lbl-colspan)))
-	 (amt-colspan (if gnc:colspans-are-working-right
-			  (or amount-colspan 1)
-			  1))
+	 (amt-colspan 1)
 	 (tbl-width (or table-width (+ amt-depth amt-colspan)))
 	 (row
 	  (append
@@ -1141,29 +1117,21 @@
   ;; be a bit redundant, i beleive that it makes the report more
   ;; readable.
   (let* ((table (gnc:make-html-table))
-	 )
-    (amount
-     'format
-     (lambda (curr val)
-       (let ((bal (gnc:make-gnc-monetary curr val)))
-	 (gnc:html-table-append-row!
-	  table
-	  (list
-	   ;; add the account balance in the respective commodity
-	   (gnc:make-html-table-cell/markup
-	    "number-cell" bal)
-           (let ((spacer (gnc:make-html-table-cell)))
-             (gnc:html-table-cell-set-style!
-              spacer "td" 'attribute (list "style" "min-width: 1em"))
-             spacer)
-	   ;; add the account balance in the report commodity
-	   (gnc:make-html-table-cell/markup
-	    "number-cell" (exchange-fn bal report-commodity))
-	   )
-	  )
-	 ))
-     #f)
-    (gnc:html-table-set-style! table "table" 'attribute(list "style" "width:100%; max-width:20em") 'attribute (list "cellpadding" "0"))
+         (spacer (gnc:make-html-table-cell))
+         (list-of-balances (amount 'format gnc:make-gnc-monetary #f)))
+    (gnc:html-table-cell-set-style! spacer "td"
+                                    'attribute (list "style" "min-width: 1em"))
+    (for-each
+     (lambda (bal)
+       (gnc:html-table-append-row!
+	table (list (gnc:make-html-table-cell/markup "number-cell" bal)
+                    spacer
+	            (gnc:make-html-table-cell/markup
+                     "number-cell" (exchange-fn bal report-commodity)))))
+     list-of-balances)
+    (gnc:html-table-set-style! table "table"
+                               'attribute (list "style" "width:100%; max-width:20em")
+                               'attribute (list "cellpadding" "0"))
     table))
 
 ;; 
@@ -1369,6 +1337,8 @@
   ;; presently unimplemented.  many of these functions are better left
   ;; to the renderer, anyway.  but if you *really* need them, you may
   ;; still use gnc:first-html-build-acct-table.
+  (issue-deprecation-warning
+   "gnc:second-html-build-acct-table is unused. use gnc:html-build-acct-table.")
   (let* ((env (list
 	       (list 'start-date start-date)
 	       (list 'end-date end-date)

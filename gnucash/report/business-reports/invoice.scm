@@ -105,7 +105,7 @@
           (_ "Total"))))
 
 (define (monetary-or-percent numeric currency entry-type)
-  (if (gnc:entry-type-percent-p entry-type)
+  (if (eqv? entry-type GNC-AMT-TYPE-PERCENT)
       (string-append (gnc:default-html-gnc-numeric-renderer numeric #f) " " (_ "%"))
       (gnc:make-gnc-monetary currency numeric)))
 
@@ -344,7 +344,7 @@ for styling the invoice. Please see the exported report for the CSS class names.
   (gnc:register-inv-option
    (gnc:make-simple-boolean-option
     (N_ "Display") (N_ "Payments")
-    "tc" (N_ "Display the payments applied to this invoice?") #f))
+    "tc" (N_ "Display the payments applied to this invoice?") #t))
 
   (gnc:register-inv-option
    (gnc:make-simple-boolean-option
@@ -718,8 +718,7 @@ for styling the invoice. Please see the exported report for the CSS class names.
    (string-append label ":")
    (gnc:make-html-div/markup
     "div-align-right"
-    (strftime date-format
-              (localtime date)))))
+    (gnc-print-time64 date date-format))))
 
 (define (make-company-table book)
   ;; single-column table. my name, address, and printdate
@@ -787,15 +786,17 @@ for styling the invoice. Please see the exported report for the CSS class names.
                (orders (if references? (delete-duplicates (map gncEntryGetOrder (gncInvoiceGetEntries invoice))) '()))
                (cust-doc? (memv type (list GNC-INVOICE-CUST-INVOICE GNC-INVOICE-CUST-CREDIT-NOTE)))
                (credit-note? (memv type (list GNC-INVOICE-CUST-CREDIT-NOTE GNC-INVOICE-VEND-CREDIT-NOTE GNC-INVOICE-EMPL-CREDIT-NOTE)))
-               (default-title (case type
-                                ((GNC-INVOICE-VEND-INVOICE)
-                                 (_ "Bill"))
-                                ((GNC-INVOICE-EMPL-INVOICE)
-                                 (_ "Expense Voucher"))
-                                ((GNC-INVOICE-CUST-CREDIT-NOTE GNC-INVOICE-VEND-CREDIT-NOTE GNC-INVOICE-EMPL-CREDIT-NOTE)
-                                 (_ "Credit Note"))
-                                (else
-                                 (_ "Invoice"))))
+               (default-title (cond
+                               ((eqv? type GNC-INVOICE-VEND-INVOICE)
+                                (_ "Bill"))
+                               ((eqv? type GNC-INVOICE-EMPL-INVOICE)
+                                (_ "Expense Voucher"))
+                               ((memv type (list GNC-INVOICE-CUST-CREDIT-NOTE
+                                                 GNC-INVOICE-VEND-CREDIT-NOTE
+                                                 GNC-INVOICE-EMPL-CREDIT-NOTE))
+                                (_ "Credit Note"))
+                               (else
+                                (_ "Invoice"))))
                (title (if (string-null? custom-title) default-title custom-title))
                ;; Translators: This is the format of the invoice title.
                ;; The first ~a is "Invoice", "Credit Note"... and the second the number.
@@ -929,6 +930,8 @@ for styling the invoice. Please see the exported report for the CSS class names.
  'in-menu? #t)
 
 (define (gnc:easy-invoice-report-create-internal invoice)
+  (issue-deprecation-warning
+   "gnc:easy-invoice-report-create-internal is unused")
   (let* ((options (gnc:make-report-options easy-invoice-guid))
          (invoice-op (gnc:lookup-option options gnc:pagename-general gnc:optname-invoice-number)))
     (gnc:option-set-value invoice-op invoice)
@@ -936,6 +939,8 @@ for styling the invoice. Please see the exported report for the CSS class names.
 (export gnc:easy-invoice-report-create-internal)
 
 (define (gnc:fancy-invoice-report-create-internal invoice)
+  (issue-deprecation-warning
+   "gnc:fancy-invoice-report-create-internal is unused")
   (let* ((options (gnc:make-report-options fancy-invoice-guid))
          (invoice-op (gnc:lookup-option options gnc:pagename-general gnc:optname-invoice-number)))
     (gnc:option-set-value invoice-op invoice)

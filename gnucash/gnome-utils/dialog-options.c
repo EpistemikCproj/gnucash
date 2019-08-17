@@ -855,14 +855,12 @@ gnc_option_changed_gain_loss_account_widget_cb (GtkTreeSelection *selection,
         }
         else /*  new account, but placeholder */
         {
-            const char *message = _("You have selected a placeholder " \
-                        "account, which is shown so that child accounts " \
-                        "are displayed, but is invalid. Please select " \
-                        "another account. (You can expand the tree below " \
-                        "the placeholder account by clicking on the arrow " \
-                        "to the left.)");
+            const char *message = _("The account %s is a placeholder account " \
+                "and does not allow transactions. " \
+        	"Please choose a different account.");
 
-            gnc_error_dialog (gnc_ui_get_gtk_window (book_currency_data->default_gain_loss_account_widget), "%s", message);
+            gnc_error_dialog (gnc_ui_get_gtk_window (book_currency_data->default_gain_loss_account_widget),
+			      message, xaccAccountGetName (account));
             if (book_currency_data->prior_gain_loss_account)
             {
                 (gnc_tree_view_account_set_selected_account
@@ -2712,9 +2710,8 @@ gnc_option_set_ui_widget_account_sel (GNCOption *option, GtkBox *page_box,
                      G_CALLBACK(gnc_option_changed_widget_cb), option);
 
     gnc_option_set_widget (option, value);
-    /* DOCUMENT ME: Why is the only option type that sets use_default to
-       TRUE? */
-    gnc_option_set_ui_value(option, TRUE);
+
+    gnc_option_set_ui_value(option, FALSE);
 
     *enclosing = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 5);
     gtk_box_set_homogeneous (GTK_BOX (*enclosing), FALSE);
@@ -3237,8 +3234,8 @@ gnc_option_set_ui_value_text (GNCOption *option, gboolean use_default,
         const gchar *string;
 
         string = gnc_scm_to_utf8_string (value);
-        gtk_text_buffer_set_text (buffer, string, scm_c_string_length(value));
-        g_free ((gpointer *) string);
+        gtk_text_buffer_set_text (buffer, string, -1);
+        free ((void*) string);
         return FALSE;
     }
     else

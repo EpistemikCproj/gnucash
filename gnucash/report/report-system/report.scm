@@ -63,6 +63,7 @@
 (define gnc:menuname-budget (N_ "B_udget"))
 (define gnc:menuname-taxes (N_ "_Taxes"))
 (define gnc:menuname-utility (N_ "_Sample & Custom"))
+(define gnc:menuname-experimental (N_ "_Experimental"))
 (define gnc:menuname-custom (N_ "_Custom"))
 (define gnc:pagename-general (N_ "General"))
 (define gnc:pagename-accounts (N_ "Accounts"))
@@ -119,16 +120,14 @@ not found.")))
   ;; set of options, and generates the report. the renderer must
   ;; return as its final value an <html-document> object.
 
-  (define (args-to-defn)
-    (let loop ((report-rec (make-report-template)) (args args))
-      (cond
-       ((null? args) report-rec)
-       (else
-        (let ((modifier (record-modifier <report-template> (car args))))
-          (modifier report-rec (cadr args))
-          (loop report-rec (cddr args)))))))
-
-  (let* ((report-rec (args-to-defn))
+  (let* ((report-rec
+          (let loop ((report-rec (make-report-template)) (args args))
+            (cond
+             ((null? args) report-rec)
+             (else
+              ((record-modifier <report-template> (car args))
+               report-rec (cadr args))
+              (loop report-rec (cddr args))))))
          (report-guid (gnc:report-template-report-guid report-rec))
          (report-name (gnc:report-template-name report-rec)))
     (cond
@@ -489,30 +488,23 @@ not found.")))
 ;; to test if the new name is unique among the existting custom reports.
 ;; If not the calling function can prevent the name from being updated.
 (define (gnc:report-template-has-unique-name? templ-guid new-name)
-  (let* ((unique? #t))
-    (if new-name
-        (hash-for-each
-         (lambda (id rec)
-           (if (and (not (equal? templ-guid id))
-                    (gnc:report-template-is-custom/template-guid? id)
-                    (equal? new-name (gnc:report-template-name rec)))
-               (set! unique? #f)))
-         *gnc:_report-templates_*))
-    unique?))
+  (or (not new-name)
+      (not (any
+            (lambda (tmpl)
+              (and (not (equal? (car tmpl) templ-guid))
+                   (equal? (gnc:report-template-name (cdr tmpl)) new-name)))
+            (gnc:custom-report-templates-list)))))
 
 ;; Generate a unique custom template name using the given string as a base
 ;; If this string already exists as a custom template name, a
 ;; number will be appended to it.
 (define (gnc:report-template-make-unique-name new-name)
-  (let* ((unique-name new-name)
-         (counter 0)
-         (unique? (gnc:report-template-has-unique-name? #f unique-name)))
-    (while (not unique?)
-      (begin
-        (set! counter (+ counter 1))
-        (set! unique-name (string-append new-name (number->string counter)))
-        (set! unique? (gnc:report-template-has-unique-name? #f unique-name))))
-    unique-name))
+  (let loop ((name new-name)
+             (counter 1))
+    (if (gnc:report-template-has-unique-name? #f name)
+        name
+        (loop (string-append new-name (number->string counter))
+              (1+ counter)))))
 
 
 ;; Load and save functions

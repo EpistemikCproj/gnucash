@@ -131,6 +131,7 @@
 (export gnc:menuname-budget)
 (export gnc:menuname-taxes)
 (export gnc:menuname-utility)
+(export gnc:menuname-experimental)
 (export gnc:menuname-custom)
 (export gnc:menuname-business-reports)
 (export gnc:pagename-general)
@@ -685,6 +686,7 @@
 (export gnc:account-get-type-string-plural)
 (export gnc:accounts-get-commodities)
 (export gnc:get-current-account-tree-depth)
+(export gnc:accounts-and-all-descendants)
 (export gnc:acccounts-get-all-subaccounts)
 (export gnc:make-stats-collector)       ;deprecated
 (export gnc:make-drcr-collector)        ;deprecated
@@ -742,6 +744,12 @@
 (export make-file-url)
 (export gnc:strify)
 (export gnc:pk)
+(export gnc:dump-book)
+(export gnc:dump-invoices)
+
+;; trep-engine.scm
+(export gnc:trep-options-generator)
+(export gnc:trep-renderer)
 
 (load-from-path "commodity-utilities")
 (load-from-path "html-barchart")
@@ -761,5 +769,6 @@
 (load-from-path "options-utilities")
 (load-from-path "report-utilities")
 (load-from-path "report")
+(load-from-path "trep-engine")
 
 (gnc-hook-add-scm-dangler HOOK-SAVE-OPTIONS gnc:save-style-sheet-options)

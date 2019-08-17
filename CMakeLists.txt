@@ -1,10 +1,6 @@
 # CMakeLists.txt for GnuCash
 
-if (WIN32 OR APPLE)
-  cmake_minimum_required (VERSION 3.3.2)
-else()
-  cmake_minimum_required (VERSION 3.0)
-endif()
+cmake_minimum_required (VERSION 3.5)
 
 project (gnucash)
 
@@ -12,13 +8,21 @@ enable_testing()
 
 # Version number of gnucash
 set (GNUCASH_MAJOR_VERSION 3)
+<<<<<<< HEAD
 set (GNUCASH_MINOR_VERSION 5)
+=======
+set (GNUCASH_MINOR_VERSION 6)
+>>>>>>> upstream/maint
 set (VERSION "${GNUCASH_MAJOR_VERSION}.${GNUCASH_MINOR_VERSION}")
 set (GNUCASH_LATEST_STABLE_SERIES 3.x)
 
 set (PACKAGE gnucash)
 set (PACKAGE_NAME GnuCash)
+<<<<<<< HEAD
 set (PACKAGE_VERSION 3.5)
+=======
+set (PACKAGE_VERSION 3.6)
+>>>>>>> upstream/maint
 set (PACKAGE_BUGREPORT "https://bugs.gnucash.org")
 set (PACKAGE_TARNAME ${PACKAGE})
 set (PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
@@ -49,6 +53,7 @@ include (GncAddTest)
 include (MakeDistFiles)
 include (GNUInstallDirs)
 include (TestBigEndian)
+include (CheckSymbolExists)
 
 # ############################################################
 # These options are settable from the CMake command line. For example, to disable
@@ -113,21 +118,30 @@ set(SYSCONFDIR_BUILD ${CMAKE_BINARY_DIR}/etc)
 set(LIBEXECDIR_BUILD ${CMAKE_BINARY_DIR}/libexec)
 set(BINDIR_BUILD     ${CMAKE_BINARY_DIR}/bin)
 
-set(SHELL_FROM_ENV $ENV{SHELL})
-set(SHELL /bin/bash)
-#We need to distinguish between MinGW.org and MinGW-w64:
-
+# We need to distinguish between MinGW.org and MinGW-w64:
 if (MINGW)
   string(FIND ${CMAKE_C_COMPILER} "msys2" IS_MSYS2)
   if(${IS_MSYS2} GREATER_EQUAL 0)
     set(MINGW64 ON)
   endif()
 endif(MINGW)
-if (MINGW AND NOT MINGW64) # /bin/bash will work fine on MinGW
+
+# Find a proper bash executable
+
+set(GNC_SHELL $ENV{GNC_SHELL})
+if (GNC_SHELL) # Replacing this with if ($ENV{GNC_SHELL}) doesn't work.
+  # Allow shell override by setting the GNC_SHELL environment variable
+  set(SHELL ${GNC_SHELL})
+elseif (MINGW AND NOT MINGW64)
+  # Old mingw's bash is on on the path, so hard-code it for now
   set(SHELL ${CMAKE_PREFIX_PATH}/mingw/msys/1.0/bin/bash.exe)
-endif()
-if (SHELL_FROM_ENV) # Replacing this with if ($ENV{SHELL}) doesn't work.
-  set(SHELL ${SHELL_FROM_ENV})
+else()
+  find_package(UnixCommands)
+  if (BASH)
+    set(SHELL ${BASH})
+  else()
+    message(SEND_ERROR "Can't find a suitable bash executable. Please set GNC_SHELL.")
+  endif()
 endif()
 
 # Determine whether we are building from a VCS or from a tarball
@@ -181,36 +195,31 @@ endif(WIN32)
 
 find_package(PkgConfig REQUIRED)
 
-# The default FindPkgConfig.make code has a bug in how the setting of PKG_CONFIG_PATH is handled.
-# The common/cmake_modules/GncFindPkgConfig.cmake file overrides a couple of macros in FindPkgConfig to fix.
-
-include (GncFindPkgConfig)
-
 if (NOT PKG_CONFIG_FOUND)
    message (SEND_ERROR "pkg-config not found, but is required")
 endif (NOT PKG_CONFIG_FOUND)
 
 # glib et al.
-gnc_pkg_check_modules (GLIB2 REQUIRED glib-2.0>=2.40)
-gnc_pkg_check_modules (GIO REQUIRED gio-2.0)
-gnc_pkg_check_modules (GOBJECT REQUIRED gobject-2.0>=2.20)
-gnc_pkg_check_modules (GMODULE REQUIRED gmodule-2.0>=2.20)
-gnc_pkg_check_modules (GTHREAD REQUIRED gthread-2.0>=2.20)
+pkg_check_modules (GLIB2 REQUIRED glib-2.0>=2.40)
+pkg_check_modules (GIO REQUIRED gio-2.0)
+pkg_check_modules (GOBJECT REQUIRED gobject-2.0>=2.20)
+pkg_check_modules (GMODULE REQUIRED gmodule-2.0>=2.20)
+pkg_check_modules (GTHREAD REQUIRED gthread-2.0>=2.20)
 
-gnc_pkg_check_modules (LIBXML2 REQUIRED libxml-2.0>=2.7.0)
-gnc_pkg_check_modules (LIBXSLT REQUIRED libxslt)
+pkg_check_modules (LIBXML2 REQUIRED libxml-2.0>=2.7.0)
+pkg_check_modules (LIBXSLT REQUIRED libxslt)
 if (WITH_GNUCASH)
   if (WIN32 OR APPLE)
-    gnc_pkg_check_modules (WEBKIT1 REQUIRED webkitgtk-3.0)
+    pkg_check_modules (WEBKIT1 REQUIRED webkitgtk-3.0)
     set(WEBKIT1 1)
     set(WEBKIT_CFLAGS ${WEBKIT2_CFLAGS})
     set(WEBKIT_INCLUDE_DIRS ${WEBKIT1_INCLUDE_DIRS})
     set(WEBKIT_LDFLAGS ${WEBKIT1_LDFLAGS})
     set(WEBKIT_LIBRARIES ${WEBKIT1_LIBRARIES})
   else (WIN32 OR APPLE)
-    gnc_pkg_check_modules (WEBKIT2_4 webkit2gtk-4.0)
+    pkg_check_modules (WEBKIT2_4 webkit2gtk-4.0)
     if (NOT WEBKIT2_4_FOUND)
-      gnc_pkg_check_modules (WEBKIT2_3 REQUIRED webkit2gtk-3.0)
+      pkg_check_modules (WEBKIT2_3 REQUIRED webkit2gtk-3.0)
       set(WEBKIT2_3 1)
       set(WEBKIT_CFLAGS ${WEBKIT2_3_CFLAGS})
       set(WEBKIT_INCLUDE_DIRS ${WEBKIT2_3_INCLUDE_DIRS})
@@ -225,10 +234,10 @@ if (WITH_GNUCASH)
     endif (NOT WEBKIT2_4_FOUND)
   endif (WIN32 OR APPLE)
 
-  gnc_pkg_check_modules (GTK3 REQUIRED gtk+-3.0>=3.10.0)
+  pkg_check_modules (GTK3 REQUIRED gtk+-3.0>=3.10.0)
 endif (WITH_GNUCASH)
 
-gnc_pkg_check_modules (ZLIB REQUIRED zlib)
+pkg_check_modules (ZLIB REQUIRED zlib)
 
 if (MSVC)
   message (STATUS "Hint: To create the import libraries for the gnome DLLs (e.g. gconf-2.lib), use the dlltool as follows: pexports bin/libgconf-2-4.dll > lib/libgconf-2.def ; dlltool -d lib/libgconf-2.def -D bin/libgconf-2-4.dll -l lib/gconf-2.lib")
@@ -238,23 +247,28 @@ if (MSVC)
   add_definitions ( -DNOMINMAX )
 endif (MSVC)
 
+<<<<<<< HEAD
 find_path (LIBINTL_INCLUDE_PATH NAMES libintl.h
       PATHS /usr/include /opt/gnome/include)
 find_library (LIBINTL_LIBRARY NAMES intl)
 
+=======
+>>>>>>> upstream/maint
 find_path (LTDL_INCLUDE_PATH NAMES ltdl.h PATHS /usr/include)
-
 if(NOT LTDL_INCLUDE_PATH-NOTFOUND)
   set(HAVE_LTDL_H 1)
 endif()
-
-
 
 find_program(GLIB_COMPILE_SCHEMAS glib-compile-schemas HINTS ${CMAKE_PREFIX_PATH}/gnome/bin)
 if (NOT GLIB_COMPILE_SCHEMAS)
   message(SEND_ERROR "Can't find glib-compile-schemas program. Please set GLIB_COMPILE_SCHEMAS.")
 endif(NOT GLIB_COMPILE_SCHEMAS)
 
+find_path (REGEX_INCLUDE_PATH NAMES regex.h
+		  PATHS /usr/include /opt/gnome/include)
+find_library (REGEX_LIBRARY NAMES regex)
+
+# I18N
 if (ALLOW_OLD_GETTEXT)
     find_package (Gettext REQUIRED)
 else (ALLOW_OLD_GETTEXT)
@@ -273,9 +287,17 @@ if (${GETTEXT_VERSION_STRING} VERSION_LESS 0.19.6)
     message (WARNING "Got gettext version ${GETTEXT_VERSION_STRING}, however you need at least gettext version 0.19.6 in order to handle translation of the gnucash.appdata file. The build will be configured with an untranslated gnucash.appdata file.")
 endif ()
 
+<<<<<<< HEAD
 find_path (REGEX_INCLUDE_PATH NAMES regex.h
       PATHS /usr/include /opt/gnome/include)
 find_library (REGEX_LIBRARY NAMES regex)
+=======
+find_path (LIBINTL_INCLUDE_PATH NAMES libintl.h
+		  PATHS /usr/include /opt/gnome/include)
+find_library (LIBINTL_LIBRARY NAMES intl)
+
+# HELP
+>>>>>>> upstream/maint
 if (WIN32)
   message(STATUS "Looking for htmlhelp.h and htmlhelp.a")
   find_path (HTMLHELP_INCLUDE_PATH NAMES htmlhelp.h)
@@ -295,7 +317,7 @@ endif()
 # Look for guile versions in this order: 2.2 > 2.0
 
 # guile library and include dir
-gnc_pkg_check_modules (GUILE22 guile-2.2 QUIET)
+pkg_check_modules (GUILE22 guile-2.2 QUIET)
 if (GUILE22_FOUND) # found guile-2.2
   add_definitions (-DHAVE_GUILE22)
   set(HAVE_GUILE2 TRUE)
@@ -310,7 +332,7 @@ if (GUILE22_FOUND) # found guile-2.2
   message(STATUS "Using guile-2.2.x")
   find_program (GUILE_EXECUTABLE NAMES guile2.2 guile)
 else(GUILE22_FOUND)
-  gnc_pkg_check_modules (GUILE2 guile-2.0>=2.0.9 QUIET)
+  pkg_check_modules (GUILE2 guile-2.0>=2.0.9 QUIET)
   if (GUILE2_FOUND) # found guile-2.0
     add_definitions (-DHAVE_GUILE20)
     set(HAVE_GUILE2 TRUE)
@@ -325,7 +347,7 @@ else(GUILE22_FOUND)
     message(STATUS "Using guile-2.0.x")
     find_program (GUILE_EXECUTABLE NAMES guile2.0 guile)
   else(GUILE2_FOUND)
-    message (FATAL_ERROR "Neither guile 2.2 nor guile 2.0 were found GnuCash can't run without one of them. Ensure that one is installed and can be found with pgk-config.")
+    message (FATAL_ERROR "Neither guile 2.2 nor guile 2.0 were found GnuCash can't run without one of them. Ensure that one is installed and can be found with pkg-config.")
   endif(GUILE2_FOUND)
 endif(GUILE22_FOUND)
 
@@ -357,10 +379,17 @@ endif ()
 
 # ############################################################
 if (WITH_AQBANKING)
-  gnc_pkg_check_modules (GWENHYWFAR REQUIRED gwenhywfar>=4.9.99)
-  gnc_pkg_check_modules (AQBANKING REQUIRED aqbanking>=5.3.4)
+  pkg_check_modules (GWENHYWFAR REQUIRED gwenhywfar>=4.9.99)
+  pkg_check_modules (AQBANKING REQUIRED aqbanking>=5.3.4)
+  set(CMAKE_REQUIRED_INCLUDES "${AQBANKING_INCLUDE_DIRS}"
+    "${GWENHYWFAR_INCLUDE_DIRS}")
+  set(CMAKE_REQUIRED_LIBRARIES "-laqbanking")
+  check_symbol_exists("AB_Banking_RuntimeConfig_SetCharValue"
+    "aqbanking/banking.h" AQB_HAS_RUNTIME_CONFIG)
+  set(CMAKE_REQUIRED_INCLUDES)
+  set(CMAKE_REQUIRED_LIBRARIES)
   if(WITH_GNUCASH)
-    gnc_pkg_check_modules (GWEN_GTK3 gwengui-gtk3)
+    pkg_check_modules (GWEN_GTK3 gwengui-gtk3)
     if(GWEN_GTK3_FOUND AND GWEN_GTK3_VERSION VERSION_GREATER "4.20.0")
       set(HAVE_GWEN_GTK3 1 CACHE BOOL "True if gwen-gtk3.pc exists")
     endif()
@@ -368,7 +397,7 @@ if (WITH_AQBANKING)
 endif (WITH_AQBANKING)
 
 if (WITH_OFX)
-  gnc_pkg_check_modules (LIBOFX REQUIRED libofx)
+  pkg_check_modules (LIBOFX REQUIRED libofx)
   include(CheckCXXSourceRuns)
   if (WIN32)
       set(CMAKE_REQUIRED_LIBRARIES "-L ${CMAKE_PREFIX_PATH}/libofx/lib -lofx")
@@ -412,7 +441,7 @@ if(APPLE)
   if(TARGET_RESULT STREQUAL "quartz")
     set(GNC_PLATFORM_COCOA 1)
     set(GDK_QUARTZ 1)
-    gnc_pkg_check_modules(GTK_MAC gtk-mac-integration-gtk3)
+    pkg_check_modules(GTK_MAC gtk-mac-integration-gtk3)
     if (GTK_MAC_FOUND)
       set(MAC_INTEGRATION 1)
       find_library(COCOA_LIBRARY Cocoa)
@@ -473,8 +502,8 @@ if (WITH_PYTHON)
     message(SEND_ERROR "Python support enabled, but Python interpreter not found.")
   endif()
 
-  if (PYTHON_VERSION_STRING VERSION_LESS "2.4.0")
-    message(SEND_ERROR "Found python version ${PYTHON_VERSION_STRING}, but it's too old. Need python >= 2.4.0")
+  if (PYTHON_VERSION_STRING VERSION_LESS "3.2.0")
+    message(SEND_ERROR "Found python version ${PYTHON_VERSION_STRING}, but it's too old. Need python >= 3.2.0")
   endif()
 
   find_package(PythonLibs 3)
@@ -510,10 +539,10 @@ get_filename_component(PERL_DIR ${PERL_EXECUTABLE} DIRECTORY)
 find_program(POD2MAN_EXECUTABLE pod2man HINTS ${PERL_DIR})
 
 #ICU
-gnc_pkg_check_modules (ICU4C REQUIRED icu-uc)
-gnc_pkg_check_modules (ICU4C_I18N REQUIRED icu-i18n)
+pkg_check_modules (ICU4C REQUIRED icu-uc)
+pkg_check_modules (ICU4C_I18N REQUIRED icu-i18n)
 
-GNC_PKG_CHECK_MODULES (LIBSECRET libsecret-1>=0.18)
+pkg_check_modules (LIBSECRET libsecret-1>=0.18)
 IF (LIBSECRET_FOUND)
   SET (HAVE_LIBSECRET ON)
 ENDIF (LIBSECRET_FOUND)
@@ -696,9 +725,6 @@ endif(UNIX OR MINGW)
 endif(ENABLE_BINRELOC)
 
 if (UNIX OR MINGW)
-set (HAVE_BIND_TEXTDOMAIN_CODESET 1)
-set (HAVE_DCGETTEXT 1)
-set (HAVE_GETTEXT 1)
 set (HAVE_GETTIMEOFDAY 1)
 set (HAVE_GUILE 1)
 set (HAVE_LIBM 1)

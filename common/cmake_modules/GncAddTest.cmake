@@ -73,11 +73,7 @@ function(gnc_add_test _TARGET _SOURCE_FILES TEST_INCLUDE_VAR_NAME TEST_LIBS_VAR_
   target_link_libraries(${_TARGET} ${TEST_LIBS})
   target_include_directories(${_TARGET} PRIVATE ${TEST_INCLUDE_DIRS})
   if (${HAVE_ENV_VARS})
-    set(CMAKE_COMMAND_TMP "")
-    if (${CMAKE_VERSION} VERSION_GREATER 3.1)
-      set(CMAKE_COMMAND_TMP ${CMAKE_COMMAND} -E env "GNC_UNINSTALLED=YES;GNC_BUILDDIR=${CMAKE_BINARY_DIR};${ARGN}")
-    endif()
-    add_test(${_TARGET} ${CMAKE_COMMAND_TMP}
+    add_test(${_TARGET} ${CMAKE_COMMAND} -E env "GNC_UNINSTALLED=YES;GNC_BUILDDIR=${CMAKE_BINARY_DIR};${ARGN}"
       ${CMAKE_BINARY_DIR}/bin/${_TARGET}
     )
     set_tests_properties(${_TARGET} PROPERTIES ENVIRONMENT "GNC_UNINSTALLED=YES;GNC_BUILDDIR=${CMAKE_BINARY_DIR};${ARGN}")
@@ -97,11 +93,7 @@ endfunction()
 
 
 function(gnc_add_scheme_test _TARGET _SOURCE_FILE)
-  set(CMAKE_COMMAND_TMP "")
-  if (${CMAKE_VERSION} VERSION_GREATER 3.1)
-    set(CMAKE_COMMAND_TMP ${CMAKE_COMMAND} -E env)
-  endif()
-  add_test(${_TARGET} ${CMAKE_COMMAND_TMP}
+  add_test(${_TARGET} ${CMAKE_COMMAND} -E env
     ${GUILE_EXECUTABLE} --debug -l ${CMAKE_CURRENT_SOURCE_DIR}/${_SOURCE_FILE} -c "(exit (run-test))"
   )
   get_guile_env()
@@ -134,10 +126,13 @@ function(gnc_gtest_configure)
     find_package(Threads REQUIRED)
     set(GTEST_FOUND YES CACHE INTERNAL "Found GTest")
     if(GTEST_SHARED_LIB)
-      set(GTEST_LIB "${GTEST_SHARED_LIB};${GTEST_MAIN_LIB}" PARENT_SCOPE)
+      set(GTEST_LIB "${GTEST_MAIN_LIB};${GTEST_SHARED_LIB}" PARENT_SCOPE)
       unset(GTEST_SRC_DIR CACHE)
     else()
-      set(GTEST_SRC "${GTEST_SRC_DIR}/src/gtest_main.cc" PARENT_SCOPE)
+      set(lib_gtest_SOURCES
+        "${GTEST_SRC_DIR}/src/gtest_main.cc"
+        "${GTEST_SRC_DIR}/src/gtest-all.cc"
+        PARENT_SCOPE)
       set(GTEST_LIB "${CMAKE_BINARY_DIR}/common/test-core/libgtest.a" PARENT_SCOPE)
     endif()
   else()

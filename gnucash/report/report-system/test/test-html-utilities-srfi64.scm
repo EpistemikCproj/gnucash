@@ -13,6 +13,7 @@
   (test-runner-factory gnc:test-runner)
   (test-begin "test-html-utilities-srfi64.scm")
   (test-gnc:html-string-sanitize)
+  (test-gnc:assign-colors)
   (test-end "test-html-utilities-srfi64.scm"))
 
 (define (test-gnc:html-string-sanitize)
@@ -25,6 +26,8 @@
               "&amp;copy;"
               (gnc:html-string-sanitize "&copy;"))
 
+  (if (not (string=? (with-output-to-string (lambda () (display "🎃"))) "🎃"))
+      (test-skip 2))
   (test-equal "emoji unchanged"
               "🎃"
               (gnc:html-string-sanitize "🎃"))
@@ -46,3 +49,11 @@
               (gnc:html-string-sanitize "\\"))
 
   (test-end "gnc:html-string-sanitize"))
+
+(define (test-gnc:assign-colors)
+  (test-begin "test-gnc:assign-colors")
+  (test-equal "assign-colors can request many colors"
+    99
+    (length (gnc:assign-colors 99)))
+  (test-end "test-gnc:assign-colors"))
+
