@@ -103,6 +103,7 @@
 (use-modules (srfi srfi-1))
 (use-modules (gnucash gnc-module))
 (use-modules (gnucash gettext))
+(use-modules (gnucash locale us tax))
 
 (eval-when
       (compile load eval expand)
@@ -112,7 +113,6 @@
 (use-modules (gnucash core-utils)) ; for gnc:version
 
 (gnc:module-load "gnucash/html" 0)
-(gnc:module-load "gnucash/tax/us" 0)
 (gnc:module-load "gnucash/report" 0)
 
 (define reportname (N_ "Tax Schedule Report/TXF Export"))
@@ -1657,7 +1657,7 @@
   ) ;;end of let*
 )
 
-;; Recursivly validate children if parent is not a tax account.
+;; Recursively validate children if parent is not a tax account.
 ;; Don't check children if parent is valid.
 ;; Returns the Parent if a child or grandchild is valid.
 (define (validate accounts)

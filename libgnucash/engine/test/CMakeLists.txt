@@ -92,7 +92,7 @@ set(gtest_old_engine_LIBS
   gncmod-engine
   ${GLIB2_LDFLAGS}
   ${Boost_LIBRARIES}
-  ${GTEST_LIB})
+  gtest)
 
 set(gtest_qof_LIBS
   ${GLIB2_LDFLAGS}
@@ -101,7 +101,7 @@ set(gtest_qof_LIBS
   ${GTHREAD_LDFLAGS}
   ${ICU4C_I18N_LDFLAGS}
   ${Boost_LIBRARIES}
-  ${GTEST_LIB})
+  gtest)
 
 set(gtest_engine_INCLUDES
   ${MODULEPATH}
@@ -109,7 +109,6 @@ set(gtest_engine_INCLUDES
   ${CMAKE_BINARY_DIR}/common # for config.h
   ${CMAKE_SOURCE_DIR}/common # for platform.h
   ${GLIB2_INCLUDE_DIRS}
-  ${GTEST_INCLUDE_DIR}
   ../../../borrowed/libc
 )
 
@@ -245,7 +244,8 @@ if (HAVE_SRFI64)
     FALSE
     )
 
-    gnc_add_scheme_tests ("${scm_tests_with_srfi64_SOURCES}")
+  gnc_add_scheme_tests("${scm_tests_with_srfi64_SOURCES}")
+  add_dependencies(check scm-srfi64-extras)
 endif (HAVE_SRFI64)
 
 gnc_add_scheme_test_targets(scm-test-engine

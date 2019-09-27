@@ -667,23 +667,10 @@ gnc_ui_account_get_tax_info_string (const Account *account)
         {
             GNCModule module;
             const gchar *tax_module;
-            /* load the tax info */
-            /* This is a very simple hack that loads the (new, special) German
-               tax definition file in a German locale, or (default) loads the
-               US tax file. */
-# ifdef G_OS_WIN32
-            gchar *thislocale = g_win32_getlocale();
-            gboolean is_de_DE = (strncmp(thislocale, "de_DE", 5) == 0);
-            g_free(thislocale);
-# else /* !G_OS_WIN32 */
-            const char *thislocale = setlocale(LC_ALL, NULL);
-            gboolean is_de_DE = (strncmp(thislocale, "de_DE", 5) == 0);
-# endif /* G_OS_WIN32 */
-            tax_module = is_de_DE ?
-                         "gnucash/tax/de_DE" :
-                         "gnucash/tax/us";
-
-            module = gnc_module_load ((char *)tax_module, 0);
+            /* load the tax info
+               Note that the module "gnucash/locale/tax" will handle selecting
+               the proper locale specific tax info */
+            module = gnc_module_load ("gnucash/locale/tax", 0);
 
             g_return_val_if_fail (module, NULL);
 
@@ -887,20 +874,6 @@ gnc_ui_account_get_tax_info_sub_acct_string (const Account *account)
         return NULL;
 }
 
-static const char *
-string_after_colon (const char *msgstr)
-{
-    const char *string_at_colon;
-    g_assert(msgstr);
-    string_at_colon = strchr(msgstr, ':');
-    if (string_at_colon)
-        return string_at_colon + 1;
-    else
-        /* No colon found; we assume the translation contains only the
-           part after the colon, similar to the disambiguation prefixes */
-        return msgstr;
-}
-
 /********************************************************************\
  * gnc_get_reconcile_str                                            *
  *   return the i18n'd string for the given reconciled flag         *
@@ -914,22 +887,15 @@ gnc_get_reconcile_str (char reconciled_flag)
     switch (reconciled_flag)
     {
     case NREC:
-        /* Translators: For the following strings, the single letters
-           after the colon are abbreviations of the word before the
-           colon. You should only translate the letter *after* the colon. */
-        return string_after_colon(_("not cleared:n"));
+        return C_("Reconciled flag 'not cleared'", "n");
     case CREC:
-        /* Translators: Please only translate the letter *after* the colon. */
-        return string_after_colon(_("cleared:c"));
+        return C_("Reconciled flag 'cleared'", "c");
     case YREC:
-        /* Translators: Please only translate the letter *after* the colon. */
-        return string_after_colon(_("reconciled:y"));
+        return C_("Reconciled flag 'reconciled'", "y");
     case FREC:
-        /* Translators: Please only translate the letter *after* the colon. */
-        return string_after_colon(_("frozen:f"));
+        return C_("Reconciled flag 'frozen'", "f");
     case VREC:
-        /* Translators: Please only translate the letter *after* the colon. */
-        return string_after_colon(_("void:v"));
+        return C_("Reconciled flag 'void'", "v");
     default:
         PERR("Bad reconciled flag\n");
         return NULL;
@@ -1511,7 +1477,7 @@ gnc_default_price_print_info (const gnc_commodity *curr)
     info.use_symbol = 0;
     info.use_locale = 1;
     info.monetary = 1;
-    
+
     info.force_fit = force;
     info.round = force;
     return info;
@@ -2109,9 +2075,7 @@ typedef enum
 
 #define done_state(state) (((state) == DONE_ST) || ((state) == NO_NUM_ST))
 
-G_INLINE_FUNC long long int multiplier (int num_decimals);
-
-long long int
+static inline long long int
 multiplier (int num_decimals)
 {
     switch (num_decimals)
@@ -2674,4 +2638,46 @@ gnc_ui_util_init (void)
     gnc_prefs_register_cb(GNC_PREFS_GROUP_GENERAL, GNC_PREF_AUTO_DECIMAL_PLACES,
                           gnc_set_auto_decimal_places, NULL);
 
+}
+
+void
+gnc_ui_util_remove_registered_prefs (void)
+{
+    // remove the registered pref call backs above
+    gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                 GNC_PREF_ACCOUNT_SEPARATOR,
+                                 gnc_configure_account_separator, NULL);
+    gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                 GNC_PREF_REVERSED_ACCTS_NONE,
+                                 gnc_configure_reverse_balance, NULL);
+    gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                 GNC_PREF_REVERSED_ACCTS_CREDIT,
+                                 gnc_configure_reverse_balance, NULL);
+    gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                 GNC_PREF_REVERSED_ACCTS_INC_EXP,
+                                 gnc_configure_reverse_balance, NULL);
+    gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                 GNC_PREF_CURRENCY_CHOICE_LOCALE,
+                                 gnc_currency_changed_cb, NULL);
+    gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                 GNC_PREF_CURRENCY_CHOICE_OTHER,
+                                 gnc_currency_changed_cb, NULL);
+    gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                 GNC_PREF_CURRENCY_OTHER,
+                                 gnc_currency_changed_cb, NULL);
+    gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL_REPORT,
+                                 GNC_PREF_CURRENCY_CHOICE_LOCALE,
+                                 gnc_currency_changed_cb, NULL);
+    gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL_REPORT,
+                                 GNC_PREF_CURRENCY_CHOICE_OTHER,
+                                 gnc_currency_changed_cb, NULL);
+    gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL_REPORT,
+                                 GNC_PREF_CURRENCY_OTHER,
+                                 gnc_currency_changed_cb, NULL);
+    gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                 GNC_PREF_AUTO_DECIMAL_POINT,
+                                 gnc_set_auto_decimal_enabled, NULL);
+    gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                 GNC_PREF_AUTO_DECIMAL_PLACES,
+                                 gnc_set_auto_decimal_places, NULL);
 }

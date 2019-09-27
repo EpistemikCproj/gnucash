@@ -27,10 +27,10 @@ add_library (gncmod-report
 
 target_compile_definitions(gncmod-report PRIVATE -DG_LOG_DOMAIN=\"gnc.report.core\")
 
-target_link_libraries(gncmod-report gnc-module gncmod-app-utils ${GTK3_LDFLAGS} ${GUILE_LDFLAGS})
+target_link_libraries(gncmod-report gnc-module gncmod-app-utils PkgConfig::GTK3 ${GUILE_LDFLAGS})
 
 target_include_directories (gncmod-report
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} PRIVATE ${GTK3_INCLUDE_DIRS}
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} 
 )
 
 
@@ -90,6 +90,7 @@ set(GUILE_DEPENDS
   scm-app-utils
   scm-scm
   scm-gnc-module
+  guile-json
   )
 
 gnc_add_scheme_targets(scm-report-1
@@ -132,7 +133,7 @@ gnc_add_scheme_deprecated_module ("gnucash report report-system report-collector
 gnc_add_scheme_deprecated_module ("gnucash report stylesheets" "" "" "")
 gnc_add_scheme_deprecated_module ("gnucash report utility-reports" "" "" "")
 
-add_custom_target(scm-report ALL DEPENDS scm-report-eguile)
+add_custom_target(scm-report ALL DEPENDS scm-report-2 scm-report-eguile)
 
 set_local_dist(report_DIST_local CMakeLists.txt
   report.i

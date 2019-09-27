@@ -65,7 +65,7 @@
 (define optname-plot-height (N_ "Plot Height"))
 (define optname-sort-method (N_ "Sort Method"))
 
-;; The option-generator. The only dependance on the type of piechart
+;; The option-generator. The only dependence on the type of piechart
 ;; is the list of account types that the account selection option
 ;; accepts.
 (define (options-generator account-types)
@@ -200,11 +200,9 @@
           ;; routine needs to send progress reports, or the price
           ;; lookup should be distributed and done when actually
           ;; needed so as to amortize the cpu time properly.
-          (gnc:report-percent-done 1)
-          (set! commodity-list (gnc:accounts-get-commodities
-                                (append
-                                 (gnc:acccounts-get-all-subaccounts accounts)
-                                 accounts)
+	  (gnc:report-percent-done 1)
+	  (set! commodity-list (gnc:accounts-get-commodities
+                                (gnc:accounts-and-all-descendants accounts)
                                 report-currency))
           (gnc:report-percent-done 5)
           (set! exchange-fn (gnc:case-exchange-time-fn

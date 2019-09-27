@@ -212,6 +212,21 @@
         (gnc:make-gnc-monetary USD 25)
         (coll-A 'getmonetary USD #f))
 
+      (test-equal "gnc:collector+"
+        '(("USD" . 50) ("GBP" . -20))
+        (collector->list
+         (gnc:collector+ coll-A coll-A coll-B)))
+
+      (test-equal "gnc:collector- 1 arg"
+        '(("GBP" . 20) ("USD" . -25))
+        (collector->list
+         (gnc:collector- coll-A)))
+
+      (test-equal "gnc:collector- 3 args"
+        '(("USD" . 25) ("GBP" . -60))
+        (collector->list
+         (gnc:collector- coll-A coll-B coll-B)))
+
       (test-equal "gnc:commodity-collector-get-negated"
         '(("USD" . -25) ("GBP" . 20))
         (collector->list
@@ -486,13 +501,6 @@
     (test-equal "gnc:get-current-account-tree-depth"
       5
       (gnc:get-current-account-tree-depth))
-
-    (test-equal "gnc:acccounts-get-all-subaccounts"
-      (list (account-lookup "Fuel")
-            (account-lookup "GBP Savings"))
-      (gnc:acccounts-get-all-subaccounts
-       (list (account-lookup "Expenses")
-             (account-lookup "GBP Bank"))))
 
     (test-equal "gnc:accounts-and-all-descendants"
       (list (account-lookup "GBP Bank")

@@ -30,7 +30,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-module (gnucash reports standard general-ledger))
-(export gnc:make-general-ledger-report)
 (use-modules (gnucash utilities)) 
 (use-modules (gnucash gnc-module))
 (use-modules (gnucash gettext))
@@ -42,11 +41,6 @@
 (define xactrptname "Transaction Report")
 
 
-;; report constructor
-
-(define (gnc:make-general-ledger-report)
-  (let* ((xactrpt (gnc:make-report xactrptguid)))
-    xactrpt))
 
 ;; options generator
 
@@ -147,7 +141,10 @@
 
 (define (general-ledger-renderer report-obj)
   ;; just delegate rendering to the Transaction Report renderer...
-  ((gnc:report-template-renderer/report-guid xactrptguid xactrptname) report-obj))
+  (let ((document ((gnc:report-template-renderer/report-guid xactrptguid xactrptname)
+                   report-obj)))
+    (gnc:html-document-set-title! document (_ reportname))
+    document))
 
 (gnc:define-report 
  'version 1

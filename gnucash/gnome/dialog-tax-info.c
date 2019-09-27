@@ -32,6 +32,7 @@
 #include "guile-mappings.h"
 #include "guile-util.h"
 #include "gnc-guile-utils.h"
+#include "gnc-module.h"
 
 #include "Account.h"
 #include "gnc-ui-util.h"
@@ -145,6 +146,10 @@ typedef struct
 static void
 initialize_getters (void)
 {
+    if (!gnc_module_load("gnucash/locale/tax", 0))
+    {
+        return;
+    }
     getters.payer_name_source = scm_c_eval_string ("gnc:txf-get-payer-name-source");
     getters.form              = scm_c_eval_string ("gnc:txf-get-form");
     getters.description       = scm_c_eval_string ("gnc:txf-get-description");
@@ -929,7 +934,7 @@ gnc_tax_info_account_changed_cb (GtkTreeSelection *selection,
     case 1:
         /* Get the account. This view is set for multiple selection, so we
            can only get a list of accounts. 1-25-19: The dialog does not work
-           for multipe accounts so it was changed to single selection */
+           for multiple accounts so it was changed to single selection */
         view = GNC_TREE_VIEW_ACCOUNT(ti_dialog->account_treeview);
         accounts = gnc_tree_view_account_get_selected_accounts (view);
         if (accounts == NULL)

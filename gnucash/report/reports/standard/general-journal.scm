@@ -27,7 +27,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-module (gnucash reports standard general-journal))
-(export gnc:make-general-journal-report)
 (use-modules (gnucash utilities)) 
 (use-modules (gnucash gnc-module))
 (use-modules (gnucash gettext))
@@ -38,11 +37,6 @@
 (define regrptname (N_ "Register"))
 (define regrptguid "22104e02654c4adba844ee75a3f8d173")
 
-;; report constructor
-
-(define (gnc:make-general-journal-report)
-  (let* ((regrpt (gnc:make-report regrptguid)))
-    regrpt))
 
 ;; options generator
 
@@ -90,14 +84,7 @@
       )
      )
     ;; we'll leave query malloc'd in case this is required by the C side...
-    
-    ;; set options in the general tab...
-    (set-option!
-     gnc:pagename-general (N_ "Title") (_ reportname))
-    ;; we can't (currently) set the Report name here
-    ;; because it is automatically set to the template
-    ;; name... :(
-    
+
     ;; set options in the display tab...
     (for-each
      (lambda (l)
@@ -126,7 +113,10 @@
 
 (define (general-journal-renderer report-obj)
   ;; just delegate rendering to the Register Report renderer...
-  ((gnc:report-template-renderer/report-guid regrptguid regrptname) report-obj))
+  (let* ((renderer (gnc:report-template-renderer/report-guid regrptguid #f))
+         (doc (renderer report-obj)))
+    (gnc:html-document-set-title! doc (_ reportname))
+    doc))
 
 (gnc:define-report 
  'version 1

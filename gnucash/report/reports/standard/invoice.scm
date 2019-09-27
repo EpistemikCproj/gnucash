@@ -727,6 +727,7 @@ for styling the invoice. Please see the exported report for the CSS class names.
          (fax (gnc:company-info book gnc:*company-fax*))
          (email (gnc:company-info book gnc:*company-email*))
          (url (gnc:company-info book gnc:*company-url*))
+         (taxnr (gnc:option-get-value book gnc:*tax-label* gnc:*tax-nr-label*))
          (taxid (gnc:company-info book gnc:*company-id*)))
 
     (if (and name (not (string-null? name)))
@@ -763,6 +764,11 @@ for styling the invoice. Please see the exported report for the CSS class names.
         (gnc:html-table-append-row! table (list
                                            (gnc:make-html-div/markup
                                             "maybe-align-right company-tax-id" taxid))))
+
+    (if (and taxnr (not (string-null? taxnr)))
+        (gnc:html-table-append-row!
+         table (list (gnc:make-html-div/markup
+                      "maybe-align-right company-tax-nr" taxnr))))
 
     table))
 
@@ -927,20 +933,3 @@ for styling the invoice. Please see the exported report for the CSS class names.
  'renderer reg-renderer
  'in-menu? #t)
 
-(define (gnc:easy-invoice-report-create-internal invoice)
-  (issue-deprecation-warning
-   "gnc:easy-invoice-report-create-internal is unused")
-  (let* ((options (gnc:make-report-options easy-invoice-guid))
-         (invoice-op (gnc:lookup-option options gnc:pagename-general gnc:optname-invoice-number)))
-    (gnc:option-set-value invoice-op invoice)
-    (gnc:make-report easy-invoice-guid options)))
-(export gnc:easy-invoice-report-create-internal)
-
-(define (gnc:fancy-invoice-report-create-internal invoice)
-  (issue-deprecation-warning
-   "gnc:fancy-invoice-report-create-internal is unused")
-  (let* ((options (gnc:make-report-options fancy-invoice-guid))
-         (invoice-op (gnc:lookup-option options gnc:pagename-general gnc:optname-invoice-number)))
-    (gnc:option-set-value invoice-op invoice)
-    (gnc:make-report fancy-invoice-guid options)))
-(export gnc:fancy-invoice-report-create-internal)

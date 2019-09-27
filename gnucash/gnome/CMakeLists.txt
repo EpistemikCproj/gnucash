@@ -136,8 +136,9 @@ set (gnc_gnome_SOURCES
 set_source_files_properties (${gnc_gnome_SOURCES} PROPERTIES OBJECT_DEPENDS ${CONFIG_H})
 
 add_library (gnc-gnome ${gnc_gnome_SOURCES} ${gnc_gnome_noinst_HEADERS} ${SWIG_GNOME_C})
-target_link_libraries(gnc-gnome gncmod-gnome-search gncmod-ledger-core gncmod-html gncmod-report
-    gncmod-register-gnome gncmod-register-core gncmod-gnome-utils gncmod-engine ${GTK3_LDFLAGS} ${GTK_MAC_LDFLAGS})
+target_link_libraries(gnc-gnome gncmod-gnome-search gncmod-ledger-core
+  gncmod-html gncmod-report gncmod-register-gnome gncmod-register-core
+  gncmod-gnome-utils gncmod-engine PkgConfig::GTK3 ${GTK_MAC_LDFLAGS})
 
 target_compile_definitions (gnc-gnome PRIVATE -DG_LOG_DOMAIN=\"gnc.gui\" ${GTK_MAC_CFLAGS_OTHER})
 target_compile_options(gnc-gnome PRIVATE -Wno-deprecated-declarations)
@@ -148,7 +149,6 @@ target_include_directories(gnc-gnome
     ${CMAKE_SOURCE_DIR}/libgnucash/app-utils/calculation
     ${CMAKE_SOURCE_DIR}/gnucash/html
     ${CMAKE_BINARY_DIR}/gnucash/gnome-utils # for gnc-warnings.h
-    ${GTK_MAC_INCLUDE_DIRS}
 )
 
 add_dependencies (gnc-gnome swig-runtime-h)
@@ -166,25 +166,25 @@ install(TARGETS gnc-gnome
 
 # No headers to install
 
-# FIXME: where does LC_ALL=C come from?
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml.in
+DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/gnucash.appdata.xml.in.in ${VCS_INFO_FILE}
+    COMMAND ${CMAKE_COMMAND} -D SRC=${CMAKE_CURRENT_SOURCE_DIR}/gnucash.appdata.xml.in.in
+                             -D DST=${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml.in
+                             -D VCS_INFO_FILE=${VCS_INFO_FILE}
+                             -D SRC_DIR=${CMAKE_SOURCE_DIR}
+                             -P ${CMAKE_SOURCE_DIR}/cmake/configure-appdata.cmake)
 
-if (${GETTEXT_VERSION_STRING} VERSION_LESS 0.19.6)
-    # Gettext is too old to be able to merge an appdata file.
-    # Fall back to providing an unmerged (and hence untranslated) appdata file.
-    configure_file (${CMAKE_CURRENT_SOURCE_DIR}/gnucash.appdata.xml.in
-                    ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml COPYONLY)
-else()
-    add_custom_command (
-        OUTPUT gnucash.appdata.xml
-        COMMAND ${CMAKE_COMMAND} -E env
-            LC_ALL=C
-            ${GETTEXT_MSGFMT_EXECUTABLE}
-                --xml --template ${CMAKE_CURRENT_SOURCE_DIR}/gnucash.appdata.xml.in
-                -d ${CMAKE_SOURCE_DIR}/po
-                -o gnucash.appdata.xml
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/gnucash.appdata.xml.in
-    )
-endif()
+# FIXME: where does LC_ALL=C come from?
+add_custom_command (
+    OUTPUT gnucash.appdata.xml
+    COMMAND ${CMAKE_COMMAND} -E env
+        LC_ALL=C
+        ${GETTEXT_MSGFMT_EXECUTABLE}
+            --xml --template ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml.in
+            -d ${CMAKE_SOURCE_DIR}/po
+            -o gnucash.appdata.xml
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml.in ${VCS_INFO_FILE}
+)
 
 add_custom_target(gnucash-appdata ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml)
 
@@ -194,23 +194,16 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml DESTINATION  ${CMA
 
 configure_file(gnucash.desktop.in.in gnucash.desktop.in)
 
-if (${GETTEXT_VERSION_STRING} VERSION_LESS 0.19)
-    # Gettext is too old to be able to merge a desktop file.
-    # Fall back to providing an unmerged (and hence untranslated) desktop file.
-    configure_file (${CMAKE_CURRENT_BINARY_DIR}/gnucash.desktop.in
-                    ${CMAKE_CURRENT_BINARY_DIR}/gnucash.desktop COPYONLY)
-else()
-    add_custom_command (
-        OUTPUT gnucash.desktop
-        COMMAND ${CMAKE_COMMAND} -E env
-            LC_ALL=C
-            ${GETTEXT_MSGFMT_EXECUTABLE}
-                --desktop --template gnucash.desktop.in
-                -d ${CMAKE_SOURCE_DIR}/po
-                -o gnucash.desktop
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gnucash.desktop.in
-    )
-endif()
+add_custom_command (
+    OUTPUT gnucash.desktop
+    COMMAND ${CMAKE_COMMAND} -E env
+        LC_ALL=C
+        ${GETTEXT_MSGFMT_EXECUTABLE}
+            --desktop --template gnucash.desktop.in
+            -d ${CMAKE_SOURCE_DIR}/po
+            -o gnucash.desktop
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gnucash.desktop.in
+)
 
 add_custom_target(gnucash-desktop ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gnucash.desktop)
 
@@ -245,5 +238,5 @@ FALSE
 gnc_add_scheme_deprecated_module ("gnucash report report-gnome" "gnucash report-menus" "scm-gnome" "")
 
 set_dist_list(gnome_DIST
-        CMakeLists.txt gnome.i gnucash.appdata.xml.in gnucash.desktop.in.in
+        CMakeLists.txt gnome.i gnucash.appdata.xml.in.in gnucash.desktop.in.in
         ${gnc_gnome_noinst_HEADERS} ${gnc_gnome_SOURCES} ${gnome_SCHEME})

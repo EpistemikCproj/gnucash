@@ -135,17 +135,10 @@
   (let ((root (gnc-get-current-root-account)))
     (gnc-account-get-tree-depth root)))
 
-
-;; Get all children of this list of accounts.
-(define (gnc:acccounts-get-all-subaccounts accountlist)
-  (append-map gnc-account-get-descendants-sorted
-              accountlist))
-
 ;; Return accountslist *and* their descendant accounts
 (define (gnc:accounts-and-all-descendants accountslist)
   (sort-and-delete-duplicates
-   (append accountslist
-           (gnc:acccounts-get-all-subaccounts accountslist))
+   (apply append accountslist (map gnc-account-get-descendants accountslist))
    (lambda (a b)
      (string<? (gnc-account-get-full-name a) (gnc-account-get-full-name b)))
    equal?))
@@ -310,6 +303,25 @@
 (define (gnc-commodity-collector-allzero? collector)
   (every zero? (map cdr (collector 'format cons #f))))
 
+;; (gnc:collector+ collectors ...) equiv to (+ collectors ...) and
+;; outputs: a collector
+(define (gnc:collector+ . collectors)
+  (let ((res (gnc:make-commodity-collector)))
+    (for-each (lambda (coll) (res 'merge coll #f)) collectors)
+    res))
+
+;; (gnc:collectors- collectors ...) equiv to (- collectors ...), can
+;; also negate single-argument collector. outputs collector
+(define gnc:collector-
+  (case-lambda
+    (() (error "gnc:collector- needs at least 1 collector argument"))
+    ((coll) (gnc:collector- (gnc:make-commodity-collector) coll))
+    ((coll . rest)
+     (let ((res (gnc:make-commodity-collector)))
+       (res 'merge coll #f)
+       (res 'minusmerge (apply gnc:collector+ rest) #f)
+       res))))
+
 ;; add any number of gnc-monetary objects into a commodity-collector
 ;; usage: (gnc:monetaries-add monetary1 monetary2 ...)
 ;; output: a commodity-collector object
@@ -348,7 +360,7 @@
   (define (amount->monetary bal)
     (gnc:make-gnc-monetary (xaccAccountGetCommodity account) bal))
   (let loop ((splits (xaccAccountGetSplitList account))
-             (dates-list (stable-sort! dates-list <))
+             (dates-list (sort dates-list <))
              (currentbal 0)
              (lastbal 0)
              (balancelist '()))

@@ -4,20 +4,6 @@
 set(SCHEMADIR_BUILD ${DATADIR_BUILD}/glib-2.0/schemas)
 file(MAKE_DIRECTORY ${SCHEMADIR_BUILD})
 unset(gschema_depends CACHE)
-# Check for GDK_MODIFIER_INTENT_DEFAULT_MOD_MASK; it's Gtk3-14 and later.
-include(CheckCSourceCompiles)
-unset(have_mod_mask CACHE)
-set(CMAKE_REQUIRED_INCLUDES ${GTK3_INCLUDE_DIRS})
-check_c_source_compiles("
-#include <gdk/gdk.h>
-
-int main (int argc, char** argv) {
-  GdkModifierIntent foo = GDK_MODIFIER_INTENT_DEFAULT_MOD_MASK;
-  return 0;
-}
-"
- have_mod_mask)
-
 # The subdirectories
 add_subdirectory (gnome)
 add_subdirectory (gnome-utils)
@@ -67,7 +53,7 @@ endif (BUILDING_FROM_VCS)
 target_link_libraries (gnucash
    gncmod-ledger-core gnc-gnome gncmod-gnome-utils gncmod-app-utils
    gncmod-engine gnc-module gnc-core-utils gncmod-report
-   ${GUILE_LDFLAGS} ${GLIB2_LDFLAGS} ${GTK3_LDFLAGS} ${GTK_MAC_LDFLAGS}
+   PkgConfig::GTK3 ${GUILE_LDFLAGS} ${GLIB2_LDFLAGS} ${GTK_MAC_LDFLAGS}
 )
 
 # Get glib executable for generating the gresource file

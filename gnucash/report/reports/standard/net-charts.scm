@@ -254,12 +254,6 @@
     ;; conversion function above. Returns a list of gnc-monetary.
     (define (process-datelist account-balances dates left-col?)
 
-      (define (collector-minus coll1 coll2)
-        (let ((res (gnc:make-commodity-collector)))
-          (res 'merge coll1 #f)
-          (res 'minusmerge coll2 #f)
-          res))
-
       (define accountlist
         (if inc-exp?
             (if left-col?
@@ -297,16 +291,14 @@
                   (cons
                    (collector->monetary
                     (if inc-exp?
-                        (collector-minus (car acct-balances) (cadr acct-balances))
+                        (gnc:collector- (car acct-balances) (cadr acct-balances))
                         (car acct-balances))
                     (if inc-exp? (cadr dates) (car dates)))
                    result)))))
 
     (gnc:report-percent-done 1)
     (set! commodity-list (gnc:accounts-get-commodities
-                          (append
-                           (gnc:acccounts-get-all-subaccounts accounts)
-                           accounts)
+                          (gnc:accounts-and-all-descendants accounts)
                           report-currency))
     (gnc:report-percent-done 10)
     (set! exchange-fn (gnc:case-exchange-time-fn

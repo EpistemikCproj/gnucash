@@ -1,6 +1,6 @@
 # CMakeLists.txt for GnuCash
 
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required (VERSION 3.10)
 
 project (gnucash)
 
@@ -45,7 +45,6 @@ include (GncAddTest)
 include (MakeDistFiles)
 include (GNUInstallDirs)
 include (TestBigEndian)
-include (CheckSymbolExists)
 
 # ############################################################
 # These options are settable from the CMake command line. For example, to disable
@@ -62,7 +61,6 @@ option (DISABLE_NLS "do not use Native Language Support" OFF)
 option (DISABLE_DEPRECATED_GLIB "don't use deprecated glib functions" OFF)
 option (DISABLE_DEPRECATED_GTK "don't use deprecated gtk, gdk or gdk-pixbuf functions" OFF)
 option (DISABLE_DEPRECATED_GNOME "don't use deprecated gnome functions" OFF)
-option (ALLOW_OLD_GETTEXT "allow to configure build with a gettext version older than 0.19.6. Some files will not be translated!" OFF)
 # ############################################################
 
 # These are also settable from the command line in a similar way.
@@ -71,7 +69,6 @@ option (ALLOW_OLD_GETTEXT "allow to configure build with a gettext version older
 set(COMPILE_GSCHEMAS ON CACHE BOOL "Compile the GSettings schema")
 
 set(GNUCASH_BUILD_ID "" CACHE STRING "Overrides the GnuCash build identification (Build ID) which defaults to a description of the vcs commit from which gnucash is built. Distributions may want to insert a package management based version number instead")
-# GENERATE_SWIG_WRAPPERS - Controls whether to generate the swig wrappers for guile and python. If not set the wrappers will only be generated when building from a git worktree, commented out here, but will be evaluated later on in this file
 
 # Check that all of the absolute install paths are inside
 # ${CMAKE_INSTALL_PREFIX}. If they're not, disable binreloc as it
@@ -152,11 +149,14 @@ if (GNC_VCS_INFO_RESULT EQUAL 0)
   if (NOT GIT_FOUND)
     message(SEND_ERROR "Looks like we're building from version control, but can't find git executable. Please set GIT_EXECUTABLE.")
   endif()
+  set(VCS_INFO_BASE_DIR ${CMAKE_BINARY_DIR})
+else()
+  set(VCS_INFO_BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
-
-# Determine whether to generate the swig wrappers.
-# By default they will only be generated when building from a git worktree
-set(GENERATE_SWIG_WRAPPERS ${BUILDING_FROM_VCS} CACHE BOOL "Controls whether to generate the swig wrappers for guile and python. If not set the wrappers will only be generated when building from a git worktree")
+# The location of gnc-vcs-info.h depends on whether we build from VCS or not
+# And this file is needed in several other build rules, so we define its
+# location once here.
+set(VCS_INFO_FILE ${VCS_INFO_BASE_DIR}/libgnucash/core-utils/gnc-vcs-info.h)
 
 if (WIN32)
   # Help Windows find the various dependencies. We assume here that the standard advice for building
@@ -185,11 +185,12 @@ if (WIN32)
   set(CMAKE_EXE_LINKER_FLAGS -mwindows)
 endif(WIN32)
 
+find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 
 if (NOT PKG_CONFIG_FOUND)
    message (SEND_ERROR "pkg-config not found, but is required")
-endif (NOT PKG_CONFIG_FOUND)
+ endif (NOT PKG_CONFIG_FOUND)
 
 # glib et al.
 pkg_check_modules (GLIB2 REQUIRED glib-2.0>=2.40)
@@ -202,31 +203,21 @@ pkg_check_modules (LIBXML2 REQUIRED libxml-2.0>=2.7.0)
 pkg_check_modules (LIBXSLT REQUIRED libxslt)
 if (WITH_GNUCASH)
   if (WIN32 OR APPLE)
-    pkg_check_modules (WEBKIT1 REQUIRED webkitgtk-3.0)
-    set(WEBKIT1 1)
-    set(WEBKIT_CFLAGS ${WEBKIT2_CFLAGS})
-    set(WEBKIT_INCLUDE_DIRS ${WEBKIT1_INCLUDE_DIRS})
-    set(WEBKIT_LDFLAGS ${WEBKIT1_LDFLAGS})
-    set(WEBKIT_LIBRARIES ${WEBKIT1_LIBRARIES})
+    pkg_check_modules (WEBKIT REQUIRED IMPORTED_TARGET webkitgtk-3.0)
+    set(WEBKIT1 1 CACHE INTERNAL "WebKitGtk")
   else (WIN32 OR APPLE)
-    pkg_check_modules (WEBKIT2_4 webkit2gtk-4.0)
-    if (NOT WEBKIT2_4_FOUND)
-      pkg_check_modules (WEBKIT2_3 REQUIRED webkit2gtk-3.0)
-      set(WEBKIT2_3 1)
-      set(WEBKIT_CFLAGS ${WEBKIT2_3_CFLAGS})
-      set(WEBKIT_INCLUDE_DIRS ${WEBKIT2_3_INCLUDE_DIRS})
-      set(WEBKIT_LDFLAGS ${WEBKIT2_3_LDFLAGS})
-      set(WEBKIT_LIBRARIES ${WEBKIT2_3_LIBRARIES})
-    else (NOT WEBKIT2_4_FOUND)
-      set(WEBKIT2_4 1)
-      set(WEBKIT_CFLAGS ${WEBKIT2_4_CFLAGS})
-      set(WEBKIT_INCLUDE_DIRS ${WEBKIT2_4_INCLUDE_DIRS})
-      set(WEBKIT_LDFLAGS ${WEBKIT2_4_LDFLAGS})
-      set(WEBKIT_LIBRARIES ${WEBKIT2_4_LIBRARIES})
-    endif (NOT WEBKIT2_4_FOUND)
+    pkg_check_modules (WEBKIT IMPORTED_TARGET webkit2gtk-4.0)
+    if (NOT WEBKIT_FOUND)
+      pkg_check_modules (WEBKIT REQUIRED IMPORTED_TARGET webkit2gtk-3.0)
+      set(WEBKIT2_3 1 CACHE INTERNAL "WebKit2Gtk3")
+    else (NOT WEBKIT_FOUND)
+      if (NOT WEBKIT2_3)
+        set(WEBKIT2_4 1 CACHE INTERNAL "WebKit2Gtk4")
+      endif(NOT WEBKIT2_3)
+    endif (NOT WEBKIT_FOUND)
   endif (WIN32 OR APPLE)
 
-  pkg_check_modules (GTK3 REQUIRED gtk+-3.0>=3.18.0)
+  pkg_check_modules (GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0>=3.18.0)
 endif (WITH_GNUCASH)
 
 pkg_check_modules (ZLIB REQUIRED zlib)
@@ -254,24 +245,7 @@ find_path (REGEX_INCLUDE_PATH NAMES regex.h
 find_library (REGEX_LIBRARY NAMES regex)
 
 # I18N
-if (ALLOW_OLD_GETTEXT)
-    find_package (Gettext REQUIRED)
-else (ALLOW_OLD_GETTEXT)
-    find_package (Gettext 0.19.6)
-    if (NOT GETTEXT_FOUND)
-        message (FATAL_ERROR "Note the build can be configured with an older version of gettext by setting ALLOW_OLD_GETTEXT=ON but then some files will not be translated:
-        - gnucash.desktop (requires at least gettext 0.19)
-        - gnucash.appdata.xml (requires at least gettext 0.19.6)")
-    endif (NOT GETTEXT_FOUND)
-endif (ALLOW_OLD_GETTEXT)
-
-if (${GETTEXT_VERSION_STRING} VERSION_LESS 0.19)
-    message (WARNING "Got gettext version ${GETTEXT_VERSION_STRING}, however you need at least gettext version 0.19 in order to handle translation of the gnucash.desktop file. The build will be configured with an untranslated gnucash.desktop file.")
-endif ()
-if (${GETTEXT_VERSION_STRING} VERSION_LESS 0.19.6)
-    message (WARNING "Got gettext version ${GETTEXT_VERSION_STRING}, however you need at least gettext version 0.19.6 in order to handle translation of the gnucash.appdata file. The build will be configured with an untranslated gnucash.appdata file.")
-endif ()
-
+find_package (Gettext 0.19.6 REQUIRED)
 find_path (LIBINTL_INCLUDE_PATH NAMES libintl.h
 		  PATHS /usr/include /opt/gnome/include)
 find_library (LIBINTL_LIBRARY NAMES intl)
@@ -286,11 +260,9 @@ endif (WIN32)
 # ############################################################
 
 # SWIG
-if(GENERATE_SWIG_WRAPPERS)
-  find_package (SWIG 2.0.10 REQUIRED)
-  include (${SWIG_USE_FILE})
-  string(REGEX MATCH "^[0-9]+[.]" SWIG_MAJOR ${SWIG_VERSION})
-endif()
+find_package (SWIG 2.0.10 REQUIRED)
+include (${SWIG_USE_FILE})
+string(REGEX MATCH "^[0-9]+[.]" SWIG_MAJOR ${SWIG_VERSION})
 
 # Find Guile and determine which version we are using.
 # Look for guile versions in this order: 2.2 > 2.0
@@ -365,7 +337,8 @@ if (WITH_AQBANKING)
   pkg_check_modules (AQBANKING REQUIRED aqbanking>=5.3.4)
   set(CMAKE_REQUIRED_INCLUDES "${AQBANKING_INCLUDE_DIRS}"
     "${GWENHYWFAR_INCLUDE_DIRS}")
-  set(CMAKE_REQUIRED_LIBRARIES "-laqbanking")
+  set(CMAKE_REQUIRED_LIBRARIES "${AQBANKING_LD_FLAGS}")
+  include(CheckSymbolExists)
   check_symbol_exists("AB_Banking_RuntimeConfig_SetCharValue"
     "aqbanking/banking.h" AQB_HAS_RUNTIME_CONFIG)
   set(CMAKE_REQUIRED_INCLUDES)
@@ -424,7 +397,7 @@ if(APPLE)
   if(TARGET_RESULT STREQUAL "quartz")
     set(GNC_PLATFORM_COCOA 1)
     set(GDK_QUARTZ 1)
-    pkg_check_modules(GTK_MAC gtk-mac-integration-gtk3)
+    pkg_check_modules(GTK_MAC IMPORTED_TARGET gtk-mac-integration-gtk3)
     if (GTK_MAC_FOUND)
       set(MAC_INTEGRATION 1)
       find_library(COCOA_LIBRARY Cocoa)
@@ -597,7 +570,7 @@ endif()
 set(BUILD_SHARED_LIBS ON)
 
 # Most libraries are installed to lib/gnucash, so set that as the default.
-# For the handful that are installed to lib, we override the properies below
+# For the handful that are installed to lib, we override the properties below
 # (after the targets have been read in).
 
 
@@ -758,7 +731,7 @@ set(PLATFORM_OSX 1)
 set(HAVE_OSX_KEYCHAIN 1)
 endif(APPLE)
 
-if(GLIB2_VERSION VERSION_GREATER 2.46.0 OR GLIB2_VERSION VERSION_EQUAL 2.46.0)
+if(GLIB2_VERSION VERSION_GREATER_EQUAL 2.46.0)
 set(HAVE_GLIB_2_46 1)
 endif()
 
@@ -873,7 +846,6 @@ add_custom_target(distcheck DEPENDS dist
             -D CMAKE_C_FLAGS=${CMAKE_C_FLAGS}
             -D CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
             -D GTEST_ROOT=${GTEST_ROOT}
-            -D GMOCK_ROOT=${GMOCK_ROOT}
             -P ${CMAKE_SOURCE_DIR}/common/cmake_modules/MakeDistCheck.cmake
         )
 

@@ -25,15 +25,6 @@ add_custom_command(
     ${LIBXSLT_XSLTPROC_EXECUTABLE} -o ${GNC_WARNINGS_H} ${CMAKE_CURRENT_SOURCE_DIR}/make-gnc-warnings-h.xsl ${WARNINGS_SCHEMA}
 )
 
-#GTK before 3.14 didn't have GDK_MODIFIER_INTENT_DEFAULT_MOD_MASK
-if (NOT have_mod_mask)
-if (MAC_INTEGRATION)
-  add_definitions(-DGDK_MODIFIER_INTENT_DEFAULT_MOD_MASK=GDK_SHIFT_MASK|GDK_CONTROL_MASK|GDK_MOD1_MASK|GDK_MOD2_MASK|GDK_SUPER_MASK|GDK_HYPER_MASK|GDK_META_MASK)
-else (MAC_INTEGRATION)
-  add_definitions(-DGDK_MODIFIER_INTENT_DEFAULT_MOD_MASK=GDK_SHIFT_MASK|GDK_CONTROL_MASK|GDK_MOD1_MASK|GDK_SUPER_MASK|GDK_HYPER_MASK|GDK_META_MASK)
-endif (MAC_INTEGRATION)
-endif (NOT have_mod_mask)
-
 set (gnome_utils_SOURCES
   account-quickfill.c
   assistant-xml-encoding.c
@@ -211,8 +202,9 @@ add_library (gncmod-gnome-utils
   ${gnome_utils_noinst_HEADERS}
 )
 
-target_link_libraries(gncmod-gnome-utils gncmod-app-utils gncmod-engine gnc-backend-xml-utils
-     ${CMAKE_DL_LIBS} ${GTK3_LDFLAGS} ${LIBSECRET_LDFLAGS} ${GTK_MAC_LDFLAGS})
+target_link_libraries(gncmod-gnome-utils gncmod-app-utils gncmod-engine
+  gnc-backend-xml-utils PkgConfig::GTK3 ${CMAKE_DL_LIBS} ${LIBSECRET_LDFLAGS}
+  ${GTK_MAC_LDFLAGS})
 
 target_compile_options(gncmod-gnome-utils PRIVATE -Wno-deprecated-declarations)
 target_compile_definitions(gncmod-gnome-utils PUBLIC ${GTK_MAC_CFLAGS_OTHER}
@@ -229,7 +221,6 @@ endif(MAC_INTEGRATION)
 
 target_include_directories(gncmod-gnome-utils
     PUBLIC
-      ${GTK3_INCLUDE_DIRS}
       ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE
       ${GTK_MAC_INCLUDE_DIRS}

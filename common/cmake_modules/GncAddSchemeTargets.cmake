@@ -159,8 +159,7 @@ function(make_scheme_targets _TARGET _SOURCE_FILES _OUTPUT_DIR _GUILE_DEPENDS
   set(_GUILE_LOAD_PATH "${current_srcdir}" "${current_bindir}" "${current_bindir}/deprecated")
   set(_GUILE_LOAD_COMPILED_PATH "${current_bindir}")
   # VERSION_GREATER_EQUAL introduced in CMake 3.7.
-  if(MINGW64 AND (${GUILE_EFFECTIVE_VERSION} VERSION_GREATER 2.2 OR
-	${GUILE_EFFECTIVE_VERSION} VERSION_EQUAL 2.2))
+  if(MINGW64 AND (${GUILE_EFFECTIVE_VERSION} VERSION_GREATER_EQUAL 2.2))
     file(TO_CMAKE_PATH $ENV{GUILE_LOAD_PATH} guile_load_path)
     file(TO_CMAKE_PATH $ENV{GUILE_LOAD_COMPILED_PATH} guile_load_compiled_path)
     list(APPEND _GUILE_LOAD_PATH ${guile_load_path})
@@ -195,7 +194,7 @@ function(make_scheme_targets _TARGET _SOURCE_FILES _OUTPUT_DIR _GUILE_DEPENDS
       if (MINGW64)
         set(fpath "")
         file(TO_CMAKE_PATH "$ENV{PATH}" fpath)
-        set(LIBRARY_PATH "PATH=\"${BINDIR_BUILD};${fpath}\"")
+        set(LIBRARY_PATH "PATH=${BINDIR_BUILD};${fpath}")
       else (MINGW64)
         set (LIBRARY_PATH "LD_LIBRARY_PATH=${LIBDIR_BUILD}:${LIBDIR_BUILD}/gnucash")
       endif (MINGW64)
@@ -226,13 +225,14 @@ function(make_scheme_targets _TARGET _SOURCE_FILES _OUTPUT_DIR _GUILE_DEPENDS
         COMMAND ${CMAKE_COMMAND} -E env
             "${LIBRARY_PATH}"
             "GNC_UNINSTALLED=YES"
-            "GNC_BUILDDIR=\"${CMAKE_BINARY_DIR}\""
-            "GUILE_LOAD_PATH=\"${_GUILE_LOAD_PATH}\""
-            "GUILE_LOAD_COMPILED_PATH=\"${_GUILE_LOAD_COMPILED_PATH}\""
-            "GNC_MODULE_PATH=\"${_GNC_MODULE_PATH}\""
-            ${GUILE_EXECUTABLE} -e '\(@@ \(guild\) main\)' -s ${GUILD_EXECUTABLE} compile -o ${output_file} ${source_file_abs_path}
+            "GNC_BUILDDIR=${CMAKE_BINARY_DIR}"
+            "GUILE_LOAD_PATH=${_GUILE_LOAD_PATH}"
+            "GUILE_LOAD_COMPILED_PATH=${_GUILE_LOAD_COMPILED_PATH}"
+            "GNC_MODULE_PATH=${_GNC_MODULE_PATH}"
+            ${GUILE_EXECUTABLE} -e "\(@@ \(guild\) main\)" -s ${GUILD_EXECUTABLE} compile -o ${output_file} ${source_file_abs_path}
         DEPENDS ${guile_depends}
         MAIN_DEPENDENCY ${source_file_abs_path}
+        VERBATIM
         )
   endforeach(source_file)
   if (__DEBUG)
