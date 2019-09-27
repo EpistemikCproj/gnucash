@@ -9,9 +9,13 @@ enable_testing()
 # Version number of gnucash
 set (GNUCASH_MAJOR_VERSION 3)
 <<<<<<< HEAD
+<<<<<<< HEAD
 set (GNUCASH_MINOR_VERSION 5)
 =======
 set (GNUCASH_MINOR_VERSION 6)
+>>>>>>> upstream/maint
+=======
+set (GNUCASH_MINOR_VERSION 7)
 >>>>>>> upstream/maint
 set (VERSION "${GNUCASH_MAJOR_VERSION}.${GNUCASH_MINOR_VERSION}")
 set (GNUCASH_LATEST_STABLE_SERIES 3.x)
@@ -19,9 +23,13 @@ set (GNUCASH_LATEST_STABLE_SERIES 3.x)
 set (PACKAGE gnucash)
 set (PACKAGE_NAME GnuCash)
 <<<<<<< HEAD
+<<<<<<< HEAD
 set (PACKAGE_VERSION 3.5)
 =======
 set (PACKAGE_VERSION 3.6)
+>>>>>>> upstream/maint
+=======
+set (PACKAGE_VERSION 3.7)
 >>>>>>> upstream/maint
 set (PACKAGE_BUGREPORT "https://bugs.gnucash.org")
 set (PACKAGE_TARNAME ${PACKAGE})
@@ -53,7 +61,6 @@ include (GncAddTest)
 include (MakeDistFiles)
 include (GNUInstallDirs)
 include (TestBigEndian)
-include (CheckSymbolExists)
 
 # ############################################################
 # These options are settable from the CMake command line. For example, to disable
@@ -160,7 +167,14 @@ if (GNC_VCS_INFO_RESULT EQUAL 0)
   if (NOT GIT_FOUND)
     message(SEND_ERROR "Looks like we're building from version control, but can't find git executable. Please set GIT_EXECUTABLE.")
   endif()
+  set(VCS_INFO_BASE_DIR ${CMAKE_BINARY_DIR})
+else()
+  set(VCS_INFO_BASE_DIR ${CMAKE_SOURCE_DIR})
 endif()
+# The location of gnc-vcs-info.h depends on whether we build from VCS or not
+# And this file is needed in several other build rules, so we define its
+# location once here.
+set(VCS_INFO_FILE ${VCS_INFO_BASE_DIR}/libgnucash/core-utils/gnc-vcs-info.h)
 
 # Determine whether to generate the swig wrappers.
 # By default they will only be generated when building from a git worktree
@@ -197,7 +211,11 @@ find_package(PkgConfig REQUIRED)
 
 if (NOT PKG_CONFIG_FOUND)
    message (SEND_ERROR "pkg-config not found, but is required")
-endif (NOT PKG_CONFIG_FOUND)
+ endif (NOT PKG_CONFIG_FOUND)
+
+if (CMAKE_VERSION VERSION_LESS 3.6)
+  include(GncPkgConfig)
+endif()
 
 # glib et al.
 pkg_check_modules (GLIB2 REQUIRED glib-2.0>=2.40)
@@ -210,31 +228,42 @@ pkg_check_modules (LIBXML2 REQUIRED libxml-2.0>=2.7.0)
 pkg_check_modules (LIBXSLT REQUIRED libxslt)
 if (WITH_GNUCASH)
   if (WIN32 OR APPLE)
-    pkg_check_modules (WEBKIT1 REQUIRED webkitgtk-3.0)
-    set(WEBKIT1 1)
-    set(WEBKIT_CFLAGS ${WEBKIT2_CFLAGS})
-    set(WEBKIT_INCLUDE_DIRS ${WEBKIT1_INCLUDE_DIRS})
-    set(WEBKIT_LDFLAGS ${WEBKIT1_LDFLAGS})
-    set(WEBKIT_LIBRARIES ${WEBKIT1_LIBRARIES})
+    if (NOT CMAKE_VERSION VERSION_LESS 3.6)
+      pkg_check_modules (WEBKIT REQUIRED IMPORTED_TARGET webkitgtk-3.0)
+    else()
+      pkg_check_modules (WEBKIT REQUIRED webkitgtk-3.0)
+      _pkg_create_imp_target(WEBKIT)
+    endif()
+    set(WEBKIT1 1 CACHE INTERNAL "WebKitGtk")
   else (WIN32 OR APPLE)
-    pkg_check_modules (WEBKIT2_4 webkit2gtk-4.0)
-    if (NOT WEBKIT2_4_FOUND)
-      pkg_check_modules (WEBKIT2_3 REQUIRED webkit2gtk-3.0)
-      set(WEBKIT2_3 1)
-      set(WEBKIT_CFLAGS ${WEBKIT2_3_CFLAGS})
-      set(WEBKIT_INCLUDE_DIRS ${WEBKIT2_3_INCLUDE_DIRS})
-      set(WEBKIT_LDFLAGS ${WEBKIT2_3_LDFLAGS})
-      set(WEBKIT_LIBRARIES ${WEBKIT2_3_LIBRARIES})
-    else (NOT WEBKIT2_4_FOUND)
-      set(WEBKIT2_4 1)
-      set(WEBKIT_CFLAGS ${WEBKIT2_4_CFLAGS})
-      set(WEBKIT_INCLUDE_DIRS ${WEBKIT2_4_INCLUDE_DIRS})
-      set(WEBKIT_LDFLAGS ${WEBKIT2_4_LDFLAGS})
-      set(WEBKIT_LIBRARIES ${WEBKIT2_4_LIBRARIES})
-    endif (NOT WEBKIT2_4_FOUND)
+    If (NOT CMAKE_VERSION VERSION_LESS 3.6)
+      pkg_check_modules (WEBKIT IMPORTED_TARGET webkit2gtk-4.0)
+    else()
+      pkg_check_modules (WEBKIT webkit2gtk-4.0)
+    endif()
+    if (NOT WEBKIT_FOUND)
+      if (NOT CMAKE_VERSION VERSION_LESS 3.6)
+        pkg_check_modules (WEBKIT REQUIRED IMPORTED_TARGET webkit2gtk-3.0)
+      else()
+        pkg_check_modules (WEBKIT REQUIRED webkit2gtk-3.0)
+      endif()
+      set(WEBKIT2_3 1 CACHE INTERNAL "WebKit2Gtk3")
+    else (NOT WEBKIT_FOUND)
+      if (NOT WEBKIT2_3)
+        set(WEBKIT2_4 1 CACHE INTERNAL "WebKit2Gtk4")
+      endif(NOT WEBKIT2_3)
+    endif (NOT WEBKIT_FOUND)
+    if (CMAKE_VERSION VERSION_LESS 3.6)
+      _pkg_create_imp_target(WEBKIT)
+    endif()
   endif (WIN32 OR APPLE)
 
-  pkg_check_modules (GTK3 REQUIRED gtk+-3.0>=3.10.0)
+  if (NOT CMAKE_VERSION VERSION_LESS 3.6)
+    pkg_check_modules (GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0>=3.10.0)
+  else()
+    pkg_check_modules (GTK3 REQUIRED gtk+-3.0>=3.10.0)
+    _pkg_create_imp_target(GTK3)
+  endif()
 endif (WITH_GNUCASH)
 
 pkg_check_modules (ZLIB REQUIRED zlib)
@@ -381,13 +410,6 @@ endif ()
 if (WITH_AQBANKING)
   pkg_check_modules (GWENHYWFAR REQUIRED gwenhywfar>=4.9.99)
   pkg_check_modules (AQBANKING REQUIRED aqbanking>=5.3.4)
-  set(CMAKE_REQUIRED_INCLUDES "${AQBANKING_INCLUDE_DIRS}"
-    "${GWENHYWFAR_INCLUDE_DIRS}")
-  set(CMAKE_REQUIRED_LIBRARIES "-laqbanking")
-  check_symbol_exists("AB_Banking_RuntimeConfig_SetCharValue"
-    "aqbanking/banking.h" AQB_HAS_RUNTIME_CONFIG)
-  set(CMAKE_REQUIRED_INCLUDES)
-  set(CMAKE_REQUIRED_LIBRARIES)
   if(WITH_GNUCASH)
     pkg_check_modules (GWEN_GTK3 gwengui-gtk3)
     if(GWEN_GTK3_FOUND AND GWEN_GTK3_VERSION VERSION_GREATER "4.20.0")
@@ -614,7 +636,7 @@ endif()
 set(BUILD_SHARED_LIBS ON)
 
 # Most libraries are installed to lib/gnucash, so set that as the default.
-# For the handful that are installed to lib, we override the properies below
+# For the handful that are installed to lib, we override the properties below
 # (after the targets have been read in).
 
 

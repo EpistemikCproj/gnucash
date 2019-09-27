@@ -166,6 +166,8 @@
   ;; instead of html-markup-b, just use the corresponding html-table-styles.
   (define default-style "text-cell")
   (define boldface-style "total-label-cell")
+  (issue-deprecation-warning
+   "gnc:html-acct-table-cell is unused.")
   (gnc:make-html-table-cell/size/markup 
    1 colspan 
    (if boldface? boldface-style default-style)
@@ -868,18 +870,5 @@
           "<link rel=\"stylesheet\" type=\"text/css\" href=\"file:///~a\" />\n"
           (gnc-path-find-localized-html-file file)))
 
-;; function to sanitize strings prior to sending to html
-(define (gnc:html-string-sanitize str)
-  (with-output-to-string
-    (lambda ()
-      (string-for-each
-       (lambda (c)
-         (display
-          (case c
-            ((#\&) "&amp;")
-            ((#\<) "&lt;")
-            ((#\>) "&gt;")
-            (else c))))
-       str))))
 
 

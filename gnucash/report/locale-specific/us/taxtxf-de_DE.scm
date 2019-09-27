@@ -450,7 +450,7 @@
             end-cells))
           (if (= level 1) (make-header-row table max-level))))))
 
-;; Recursivly validate children if parent is not a tax account.
+;; Recursively validate children if parent is not a tax account.
 ;; Don't check children if parent is valid.
 ;; Returns the Parent if a child or grandchild is valid.
 (define (validate accounts)
@@ -505,11 +505,7 @@
                                 (validate (reverse 
                                            (gnc-account-get-children-sorted
                                             (gnc-get-current-root-account))))))
-         (book (if selected-accounts
-                   (gnc-account-get-book (if (pair? selected-accounts)
-                                             (car selected-accounts)
-                                             selected-accounts))
-                   #f))
+         (book (gnc-get-current-book))
          (generations (if (pair? selected-accounts)
                           (apply max (map (lambda (x) (num-generations x 1))
                                           selected-accounts))
@@ -772,12 +768,7 @@
 	  (to-year    (gnc-print-time64 to-value "%Y"))
           (today-date (gnc-print-time64 (time64CanonicalDayTime (current-time))
                                         "%d.%m.%Y"))
-	  (tax-nr (unless book
-                      (or
-                       (gnc:option-get-value book gnc:*tax-label* gnc:*tax-nr-label*)
-                       "")
-                      ""))
-	  )
+	  (tax-nr (gnc:option-get-value book gnc:*tax-label* gnc:*tax-nr-label*)))
 
       ;; Now, the main body
       ;; Reset all the balance collectors

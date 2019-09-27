@@ -716,10 +716,7 @@ gnc_set_default_gain_loss_account_widget(gnc_commodity *commodity)
                 col = gnc_tree_view_add_toggle_column(GNC_TREE_VIEW(
                         book_currency_data->default_gain_loss_account_widget),
                         _("Placeholder"),
-                        /* Translators: This string has a context prefix; the
-                           translation must only contain the part after
-                           the | character. */
-                        Q_("Column letter for 'Placeholder'|P"),
+                        C_("Column header for 'Placeholder'", "P"),
                         "placeholder",
                         GNC_TREE_MODEL_ACCOUNT_COL_PLACEHOLDER,
                         GNC_TREE_VIEW_COLUMN_VISIBLE_ALWAYS,
@@ -1212,7 +1209,7 @@ gnc_option_create_currency_accounting_widget (char *name, GNCOption *option)
     gtk_widget_set_halign (GTK_WIDGET(frame), GTK_ALIGN_FILL);
     gtk_widget_set_hexpand (GTK_WIDGET(frame), TRUE);
 
-    /* Create the verticle button box */
+    /* Create the vertical button box */
     vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 5);
     gtk_box_set_homogeneous (GTK_BOX (vbox), FALSE);
     gtk_container_add (GTK_CONTAINER (frame), vbox);

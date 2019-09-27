@@ -106,7 +106,7 @@
 (export gnc:assign-colors)
 (export gnc:html-table-append-ruler!)
 (export gnc:html-table-append-ruler/markup!)
-(export gnc:html-acct-table-cell)
+(export gnc:html-acct-table-cell)       ;deprecated
 (export gnc:html-acct-table-row-helper! )
 (export gnc:html-acct-table-comm-row-helper!)
 (export gnc:html-build-acct-table)
@@ -122,7 +122,6 @@
 (export gnc:html-make-options-link)
 (export gnc:html-js-include)
 (export gnc:html-css-include)
-(export gnc:html-string-sanitize)
 
 ;; report.scm
 (export gnc:menuname-reports)
@@ -687,12 +686,14 @@
 (export gnc:accounts-get-commodities)
 (export gnc:get-current-account-tree-depth)
 (export gnc:accounts-and-all-descendants)
-(export gnc:acccounts-get-all-subaccounts)
+(export gnc:acccounts-get-all-subaccounts) ;deprecated
 (export gnc:make-stats-collector)       ;deprecated
 (export gnc:make-drcr-collector)        ;deprecated
 (export gnc:make-value-collector)
 (export gnc:make-number-collector)      ;deprecated
 (export gnc:make-commodity-collector)
+(export gnc:collector+)
+(export gnc:collector-)
 (export gnc:commodity-collector-get-negated)
 (export gnc:commodity-collectorlist-get-merged) ;deprecated
 (export gnc-commodity-collector-commodity-count)

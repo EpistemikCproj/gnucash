@@ -303,7 +303,7 @@ gnc_split_register_get_recn_label (VirtualLocation virt_loc,
         return _("Paid");
 
     default:
-        return _("Reconciled:R") + 11;
+        return C_("Column header for 'Reconciled'", "R");
     }
 }
 
@@ -325,7 +325,7 @@ static const char *
 gnc_split_register_get_associate_label (VirtualLocation virt_loc,
                                    gpointer user_data)
 {
-    return _("Associate:A") + 10;
+    return C_("Column header for 'Associate'", "A");
 }
 
 static const char *
@@ -526,7 +526,7 @@ gnc_split_register_get_recn_tooltip (VirtualLocation virt_loc,
         char datebuff[MAX_DATE_LENGTH + 1];
         time64 time = xaccSplitGetDateReconciled (split);
         memset (datebuff, 0, sizeof(datebuff));
-        qof_print_date_buff (datebuff, sizeof(datebuff), time);
+        qof_print_date_buff (datebuff, MAX_DATE_LENGTH, time);
         return g_strdup_printf (_("Reconciled on %s"), datebuff);
     }
     else if (xaccSplitGetReconcile (split) == VREC)
@@ -1003,6 +1003,8 @@ gnc_split_register_get_date_help (VirtualLocation virt_loc,
 
     gnc_date_cell_get_date ((DateCell *) cell, &cell_time, FALSE);
 
+    /* Translators: This is a date format, see i.e.
+       https://www.gnu.org/software/libc/manual/html_node/Formatting-Calendar-Time.html */
     date_string = gnc_print_time64 (cell_time, _("%A %d %B %Y"));
 
     return g_strdup (date_string);
