@@ -72,7 +72,6 @@
 (define optname-end-date (N_ "Date of Report"))
 (define optname-report-variant (N_ "Report variation"))
 (define opthelp-report-variant (N_ "Kind of trial balance to generate."))
-;; FIXME this needs an indent option
 
 (define optname-accounts (N_ "Accounts"))
 (define opthelp-accounts
@@ -361,7 +360,6 @@
          (show-rates? (get-option pagename-commodities optname-show-rates))
          (show-zb-accts? #t)
          (use-links? (get-option gnc:pagename-display optname-account-links))
-         (indent 0)
 
          ;; decompose the account list
          (split-up-accounts (gnc:decompose-accountlist accounts))
@@ -559,15 +557,11 @@
           (let* ((env (gnc:html-acct-table-get-row-env acct-table 0)))
             (set! account-cols (get-val env 'account-cols)))
 
-          ;; Workaround to force gtkhtml into displaying wide
-          ;; enough columns.
-          (let ((space
-                 (make-list
-                  (+ account-cols
-                     (if (eq? report-variant 'work-sheet) 10 2))
-                  "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")))
+          (let* ((ncols (+ account-cols (if (eq? report-variant 'work-sheet) 10 2)))
+                 (space (make-list ncols (gnc:make-html-table-cell/min-width 60))))
             (gnc:html-table-append-row! build-table space)
-            (set! header-rows (+ header-rows 1)))
+            (set! header-rows (1+ header-rows)))
+
           ;; add the double-column headers if required
           (if (eq? report-variant 'work-sheet)
               (let* ((headings

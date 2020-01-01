@@ -105,20 +105,12 @@
        (apply gnc:make-html-data-style-info rest)
        (apply gnc:make-html-markup-style-info rest))))
 
-(define (gnc:html-document-tree-collapse tree)
-  (let ((retval '()))
-    (let loop ((lst tree))
-      (for-each
-       (lambda (elt)
-         (cond
-          ((string? elt)
-           (set! retval (cons elt retval)))
-          ((not (list? elt))
-           (set! retval (cons (object->string elt) retval)))
-          (else
-           (loop elt))))
-       lst))
-    retval))
+(define (gnc:html-document-tree-collapse . tree)
+  (let lp ((e tree) (accum '()))
+    (cond ((null? e) accum)
+          ((pair? e) (fold lp accum e))
+          ((string? e) (cons e accum))
+          (else (cons (object->string e) accum)))))
 
 ;; first optional argument is "headers?"
 ;; returns the html document as a string, I think.
@@ -151,6 +143,7 @@
             ;;<guile-sitedir>/gnucash/reports/data/balsheet-eg.eguile.scm:<html>
             ;;<guile-sitedir>/gnucash/reports/data/receipt.eguile.scm:<html>
 
+            (push "<!DOCTYPE html>\n")
             (push "<html dir='auto'>\n")
             (push "<head>\n")
             (push "<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\" />\n")
@@ -276,6 +269,8 @@
         ;;       as a call to this function just like any other tag, passing face/size/color as attributes.
         (if (or face size color)
             (begin
+              (issue-deprecation-warning
+               "this section is unreachable in code")
               (push "<font ")
               (if face
                   (begin

@@ -23,6 +23,19 @@
 ;; Boston, MA  02110-1301,  USA       gnu@gnu.org
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+<<<<<<< HEAD:gnucash/report/report-register-hooks.scm
+=======
+
+(define-module (gnucash report standard-reports))
+(use-modules (srfi srfi-9))
+(use-modules (srfi srfi-13))
+(use-modules (gnucash utilities))
+(use-modules (gnucash core-utils))
+
+(export gnc:register-report-create)
+(export gnc:register-report-hook)
+
+>>>>>>> upstream/maint:gnucash/report/standard-reports/standard-reports.scm
 (define gnc:*register-report-hash* (make-hash-table 23))
 
 ;; Keep a hash-table of records, keyed off the account type.  Each
@@ -30,25 +43,14 @@
 ;; or without split.  If no function is found, then run the 'default'
 ;; function
 
-(define acct-type-info (make-record-type "AcctTypeInfo" '(split non-split)))
-
-(define make-acct-type-private
-  (record-constructor acct-type-info '(split non-split)))
+(define-record-type :acct-type-info
+  (make-acct-type-private split non-split)
+  acct-type?
+  (split get-split set-split)
+  (non-split get-non-split set-non-split))
 
 (define (make-acct-type)
   (make-acct-type-private #f #f))
-
-(define get-split
-  (record-accessor acct-type-info 'split))
-
-(define set-split
-  (record-modifier acct-type-info 'split))
-
-(define get-non-split
-  (record-accessor acct-type-info 'non-split))
-
-(define set-non-split
-  (record-modifier acct-type-info 'non-split))
 
 (define (gnc:register-report-hook acct-type split? create-fcn)
   (let ((type-info (hash-ref gnc:*register-report-hash* acct-type (make-acct-type))))

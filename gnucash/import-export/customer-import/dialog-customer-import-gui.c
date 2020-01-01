@@ -124,25 +124,25 @@ gnc_plugin_customer_import_showGUI(GtkWindow *parent)
   column = gtk_tree_view_column_new_with_attributes (description, renderer, "text", column_id, NULL); \
   gtk_tree_view_column_set_resizable (column, TRUE); \
   gtk_tree_view_append_column (GTK_TREE_VIEW (gui->tree_view), column);
-    CREATE_COLUMN ("id", CI_ID);
-    CREATE_COLUMN ("company", CI_COMPANY);
-    CREATE_COLUMN ("name", CI_NAME);
-    CREATE_COLUMN ("addr1", CI_ADDR1);
-    CREATE_COLUMN ("addr2", CI_ADDR2);
-    CREATE_COLUMN ("addr3", CI_ADDR3);
-    CREATE_COLUMN ("addr4", CI_ADDR4);
-    CREATE_COLUMN ("phone", CI_PHONE);
-    CREATE_COLUMN ("fax", CI_FAX);
-    CREATE_COLUMN ("email", CI_EMAIL);
-    CREATE_COLUMN ("notes", CI_NOTES);
-    CREATE_COLUMN ("shipname", CI_SHIPNAME);
-    CREATE_COLUMN ("shipaddr1", CI_SHIPADDR1);
-    CREATE_COLUMN ("shipaddr2", CI_SHIPADDR2);
-    CREATE_COLUMN ("shipaddr3", CI_SHIPADDR3);
-    CREATE_COLUMN ("shipaddr4", CI_SHIPADDR4);
-    CREATE_COLUMN ("shipphone", CI_SHIPPHONE);
-    CREATE_COLUMN ("shipfax", CI_SHIPFAX);
-    CREATE_COLUMN ("shipemail", CI_SHIPEMAIL);
+    CREATE_COLUMN (_("ID"), CI_ID);
+    CREATE_COLUMN (_("Company"), CI_COMPANY);
+    CREATE_COLUMN (_("Name"), CI_NAME);
+    CREATE_COLUMN (_("Address 1"), CI_ADDR1);
+    CREATE_COLUMN (_("Address 2"), CI_ADDR2);
+    CREATE_COLUMN (_("Address 3"), CI_ADDR3);
+    CREATE_COLUMN (_("Address 4"), CI_ADDR4);
+    CREATE_COLUMN (_("Phone"), CI_PHONE);
+    CREATE_COLUMN (_("Fax"), CI_FAX);
+    CREATE_COLUMN (_("Email"), CI_EMAIL);
+    CREATE_COLUMN (_("Notes"), CI_NOTES);
+    CREATE_COLUMN (_("Shipping Name"), CI_SHIPNAME);
+    CREATE_COLUMN (_("Shipping Address 1"), CI_SHIPADDR1);
+    CREATE_COLUMN (_("Shipping Address 2"), CI_SHIPADDR2);
+    CREATE_COLUMN (_("Shipping Address 3"), CI_SHIPADDR3);
+    CREATE_COLUMN (_("Shipping Address 4"), CI_SHIPADDR4);
+    CREATE_COLUMN (_("Shipping Phone"), CI_SHIPPHONE);
+    CREATE_COLUMN (_("Shipping Fax"), CI_SHIPFAX);
+    CREATE_COLUMN (_("Shipping Email"), CI_SHIPEMAIL);
 
     gui->component_id = gnc_register_gui_component ("dialog-customer-import-gui",
                         NULL,

@@ -56,6 +56,8 @@ enum
     TARGET_COMPOUND_TEXT
 };
 
+#define MIN_BUTT_WIDTH 20 // minimum size for a button excluding border
+
 static GtkBoxClass *gnc_item_edit_parent_class;
 
 static GtkToggleButtonClass *gnc_item_edit_tb_parent_class;
@@ -111,12 +113,19 @@ gnc_item_edit_tb_get_preferred_width (GtkWidget *widget,
 {
     GncItemEditTb *tb = GNC_ITEM_EDIT_TB (widget);
     GncItemEdit *item_edit = GNC_ITEM_EDIT(tb->sheet->item_editor);
+    GtkStyleContext *context = gtk_widget_get_style_context (GTK_WIDGET(tb));
+    GtkBorder border;
     gint x, y, w, h = 2, width = 0;
     gnc_item_edit_get_pixel_coords (GNC_ITEM_EDIT (item_edit), &x, &y, &w, &h);
     width = ((h - 2)*2)/3;
-    if (width < 22) // minimum size for a button
-        width = 22;
+
+    gtk_style_context_get_border (context, GTK_STATE_FLAG_NORMAL, &border);
+
+    if (width < MIN_BUTT_WIDTH + border.left + border.right)
+        width = MIN_BUTT_WIDTH + border.left + border.right;
+
     *minimal_width = *natural_width = width;
+    item_edit->button_width = width;
 }
 
 static void
@@ -319,6 +328,7 @@ gnc_item_edit_init (GncItemEdit *item_edit)
     item_edit->popup_user_data = NULL;
 
     item_edit->style = NULL;
+    item_edit->button_width = MIN_BUTT_WIDTH;
 
     gnc_virtual_location_init(&item_edit->virt_loc);
 }
@@ -561,7 +571,8 @@ draw_arrow_cb (GtkWidget *widget, cairo_t *cr, gpointer data)
     gint height = gtk_widget_get_allocated_height (widget);
     gint size;
 
-    gtk_render_background (context, cr, 0, 0, width, height);
+    // allow room for a border
+    gtk_render_background (context, cr, 2, 2, width - 4, height - 4);
 
     gtk_style_context_add_class (context, GTK_STYLE_CLASS_ARROW);
 
@@ -795,6 +806,25 @@ gnc_item_edit_get_padding_border (GncItemEdit *item_edit, Sides side)
     default:
         return 2;
     }
+}
+
+gint
+gnc_item_edit_get_button_width (GncItemEdit *item_edit)
+{
+    if (item_edit)
+    {
+        if (gtk_widget_is_visible (GTK_WIDGET(item_edit->popup_toggle.tbutton)))
+            return item_edit->button_width;
+        else
+        {
+            GtkStyleContext *context = gtk_widget_get_style_context (GTK_WIDGET(item_edit->popup_toggle.tbutton));
+            GtkBorder border;
+
+            gtk_style_context_get_border (context, GTK_STATE_FLAG_NORMAL, &border);
+            return MIN_BUTT_WIDTH + border.left + border.right;
+        }
+    }
+    return MIN_BUTT_WIDTH + 2; // add the default border
 }
 
 static gboolean
