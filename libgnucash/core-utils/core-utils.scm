@@ -33,13 +33,17 @@
 
 (use-modules (sw_core_utils))
 
-(re-export gnc-prefs-is-debugging-enabled)
 (re-export gnc-path-get-bindir)
+(re-export gnc-path-get-scmdir)
+(re-export gnc-path-get-reportsdir)
 (re-export gnc-path-get-stdreportsdir)
 (re-export gnc-path-find-localized-html-file)
 (re-export gnc-build-userdata-path)
+(re-export gnc-build-scm-path)
 (re-export gnc-build-report-path)
 (re-export gnc-build-stdreports-path)
+(re-export gnc-build-reports-path)
+(re-export gnc-file-path-absolute)
 (re-export gnc-utf8?)
 (re-export gnc-utf8-strip-invalid-strdup)
 (re-export gnc-locale-from-utf8)
@@ -49,6 +53,7 @@
 (re-export gnc-scm-log-msg)
 (re-export gnc-scm-log-debug)
 (re-export gnc-locale-default-iso-currency-code)
+(re-export gnc-locale-name)
 
 (re-export gnc-prefs-set-bool)
 (re-export gnc-prefs-set-int)
@@ -57,5 +62,7 @@
 (re-export gnc-prefs-set-string)
 (re-export gnc-prefs-set-coords)
 (re-export gnc-prefs-get-string)
+(re-export gnc-prefs-is-extra-enabled)
+(re-export gnc-prefs-is-debugging-enabled)
 
 (define-public gnc:version (gnc-version))

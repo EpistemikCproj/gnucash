@@ -1,6 +1,6 @@
 # CMakeLists.txt for GnuCash
 
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required (VERSION 3.10)
 
 project (gnucash)
 
@@ -8,29 +8,13 @@ enable_testing()
 
 # Version number of gnucash
 set (GNUCASH_MAJOR_VERSION 3)
-<<<<<<< HEAD
-<<<<<<< HEAD
-set (GNUCASH_MINOR_VERSION 5)
-=======
-set (GNUCASH_MINOR_VERSION 6)
->>>>>>> upstream/maint
-=======
-set (GNUCASH_MINOR_VERSION 7)
->>>>>>> upstream/maint
+set (GNUCASH_MINOR_VERSION 900)
 set (VERSION "${GNUCASH_MAJOR_VERSION}.${GNUCASH_MINOR_VERSION}")
 set (GNUCASH_LATEST_STABLE_SERIES 3.x)
 
 set (PACKAGE gnucash)
 set (PACKAGE_NAME GnuCash)
-<<<<<<< HEAD
-<<<<<<< HEAD
-set (PACKAGE_VERSION 3.5)
-=======
-set (PACKAGE_VERSION 3.6)
->>>>>>> upstream/maint
-=======
-set (PACKAGE_VERSION 3.7)
->>>>>>> upstream/maint
+set (PACKAGE_VERSION 3.900)
 set (PACKAGE_BUGREPORT "https://bugs.gnucash.org")
 set (PACKAGE_TARNAME ${PACKAGE})
 set (PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
@@ -77,7 +61,6 @@ option (DISABLE_NLS "do not use Native Language Support" OFF)
 option (DISABLE_DEPRECATED_GLIB "don't use deprecated glib functions" OFF)
 option (DISABLE_DEPRECATED_GTK "don't use deprecated gtk, gdk or gdk-pixbuf functions" OFF)
 option (DISABLE_DEPRECATED_GNOME "don't use deprecated gnome functions" OFF)
-option (ALLOW_OLD_GETTEXT "allow to configure build with a gettext version older than 0.19.6. Some files will not be translated!" OFF)
 # ############################################################
 
 # These are also settable from the command line in a similar way.
@@ -86,7 +69,6 @@ option (ALLOW_OLD_GETTEXT "allow to configure build with a gettext version older
 set(COMPILE_GSCHEMAS ON CACHE BOOL "Compile the GSettings schema")
 
 set(GNUCASH_BUILD_ID "" CACHE STRING "Overrides the GnuCash build identification (Build ID) which defaults to a description of the vcs commit from which gnucash is built. Distributions may want to insert a package management based version number instead")
-# GENERATE_SWIG_WRAPPERS - Controls whether to generate the swig wrappers for guile and python. If not set the wrappers will only be generated when building from a git worktree, commented out here, but will be evaluated later on in this file
 
 # Check that all of the absolute install paths are inside
 # ${CMAKE_INSTALL_PREFIX}. If they're not, disable binreloc as it
@@ -176,10 +158,6 @@ endif()
 # location once here.
 set(VCS_INFO_FILE ${VCS_INFO_BASE_DIR}/libgnucash/core-utils/gnc-vcs-info.h)
 
-# Determine whether to generate the swig wrappers.
-# By default they will only be generated when building from a git worktree
-set(GENERATE_SWIG_WRAPPERS ${BUILDING_FROM_VCS} CACHE BOOL "Controls whether to generate the swig wrappers for guile and python. If not set the wrappers will only be generated when building from a git worktree")
-
 if (WIN32)
   # Help Windows find the various dependencies. We assume here that the standard advice for building
   # GnuCash has been followed and that these dependencies live underneath something like C:/GCDEV, which
@@ -207,15 +185,12 @@ if (WIN32)
   set(CMAKE_EXE_LINKER_FLAGS -mwindows)
 endif(WIN32)
 
+find_package(Threads REQUIRED)
 find_package(PkgConfig REQUIRED)
 
 if (NOT PKG_CONFIG_FOUND)
    message (SEND_ERROR "pkg-config not found, but is required")
  endif (NOT PKG_CONFIG_FOUND)
-
-if (CMAKE_VERSION VERSION_LESS 3.6)
-  include(GncPkgConfig)
-endif()
 
 # glib et al.
 pkg_check_modules (GLIB2 REQUIRED glib-2.0>=2.40)
@@ -228,42 +203,21 @@ pkg_check_modules (LIBXML2 REQUIRED libxml-2.0>=2.7.0)
 pkg_check_modules (LIBXSLT REQUIRED libxslt)
 if (WITH_GNUCASH)
   if (WIN32 OR APPLE)
-    if (NOT CMAKE_VERSION VERSION_LESS 3.6)
-      pkg_check_modules (WEBKIT REQUIRED IMPORTED_TARGET webkitgtk-3.0)
-    else()
-      pkg_check_modules (WEBKIT REQUIRED webkitgtk-3.0)
-      _pkg_create_imp_target(WEBKIT)
-    endif()
+    pkg_check_modules (WEBKIT REQUIRED IMPORTED_TARGET webkitgtk-3.0)
     set(WEBKIT1 1 CACHE INTERNAL "WebKitGtk")
   else (WIN32 OR APPLE)
-    If (NOT CMAKE_VERSION VERSION_LESS 3.6)
-      pkg_check_modules (WEBKIT IMPORTED_TARGET webkit2gtk-4.0)
-    else()
-      pkg_check_modules (WEBKIT webkit2gtk-4.0)
-    endif()
+    pkg_check_modules (WEBKIT IMPORTED_TARGET webkit2gtk-4.0)
     if (NOT WEBKIT_FOUND)
-      if (NOT CMAKE_VERSION VERSION_LESS 3.6)
-        pkg_check_modules (WEBKIT REQUIRED IMPORTED_TARGET webkit2gtk-3.0)
-      else()
-        pkg_check_modules (WEBKIT REQUIRED webkit2gtk-3.0)
-      endif()
+      pkg_check_modules (WEBKIT REQUIRED IMPORTED_TARGET webkit2gtk-3.0)
       set(WEBKIT2_3 1 CACHE INTERNAL "WebKit2Gtk3")
     else (NOT WEBKIT_FOUND)
       if (NOT WEBKIT2_3)
         set(WEBKIT2_4 1 CACHE INTERNAL "WebKit2Gtk4")
       endif(NOT WEBKIT2_3)
     endif (NOT WEBKIT_FOUND)
-    if (CMAKE_VERSION VERSION_LESS 3.6)
-      _pkg_create_imp_target(WEBKIT)
-    endif()
   endif (WIN32 OR APPLE)
 
-  if (NOT CMAKE_VERSION VERSION_LESS 3.6)
-    pkg_check_modules (GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0>=3.10.0)
-  else()
-    pkg_check_modules (GTK3 REQUIRED gtk+-3.0>=3.10.0)
-    _pkg_create_imp_target(GTK3)
-  endif()
+  pkg_check_modules (GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0>=3.18.0)
 endif (WITH_GNUCASH)
 
 pkg_check_modules (ZLIB REQUIRED zlib)
@@ -298,6 +252,7 @@ find_path (REGEX_INCLUDE_PATH NAMES regex.h
 find_library (REGEX_LIBRARY NAMES regex)
 
 # I18N
+<<<<<<< HEAD
 if (ALLOW_OLD_GETTEXT)
     find_package (Gettext REQUIRED)
 else (ALLOW_OLD_GETTEXT)
@@ -321,6 +276,9 @@ find_path (REGEX_INCLUDE_PATH NAMES regex.h
       PATHS /usr/include /opt/gnome/include)
 find_library (REGEX_LIBRARY NAMES regex)
 =======
+=======
+find_package (Gettext 0.19.6 REQUIRED)
+>>>>>>> master
 find_path (LIBINTL_INCLUDE_PATH NAMES libintl.h
 		  PATHS /usr/include /opt/gnome/include)
 find_library (LIBINTL_LIBRARY NAMES intl)
@@ -336,11 +294,9 @@ endif (WIN32)
 # ############################################################
 
 # SWIG
-if(GENERATE_SWIG_WRAPPERS)
-  find_package (SWIG 2.0.10 REQUIRED)
-  include (${SWIG_USE_FILE})
-  string(REGEX MATCH "^[0-9]+[.]" SWIG_MAJOR ${SWIG_VERSION})
-endif()
+find_package (SWIG 2.0.10 REQUIRED)
+include (${SWIG_USE_FILE})
+string(REGEX MATCH "^[0-9]+[.]" SWIG_MAJOR ${SWIG_VERSION})
 
 # Find Guile and determine which version we are using.
 # Look for guile versions in this order: 2.2 > 2.0
@@ -406,10 +362,21 @@ if (GNC_TEXT_PORTS_RESULT EQUAL 0)
   set (HAVE_TEXT_PORTS TRUE)
 endif ()
 
+# Determine where to install our guile modules libraries.
+find_guile_dirs()
+
 # ############################################################
 if (WITH_AQBANKING)
   pkg_check_modules (GWENHYWFAR REQUIRED gwenhywfar>=4.9.99)
   pkg_check_modules (AQBANKING REQUIRED aqbanking>=5.3.4)
+  set(CMAKE_REQUIRED_INCLUDES "${AQBANKING_INCLUDE_DIRS}"
+    "${GWENHYWFAR_INCLUDE_DIRS}")
+  set(CMAKE_REQUIRED_LIBRARIES "${AQBANKING_LD_FLAGS}")
+  include(CheckSymbolExists)
+  check_symbol_exists("AB_Banking_RuntimeConfig_SetCharValue"
+    "aqbanking/banking.h" AQB_HAS_RUNTIME_CONFIG)
+  set(CMAKE_REQUIRED_INCLUDES)
+  set(CMAKE_REQUIRED_LIBRARIES)
   if(WITH_GNUCASH)
     pkg_check_modules (GWEN_GTK3 gwengui-gtk3)
     if(GWEN_GTK3_FOUND AND GWEN_GTK3_VERSION VERSION_GREATER "4.20.0")
@@ -463,7 +430,7 @@ if(APPLE)
   if(TARGET_RESULT STREQUAL "quartz")
     set(GNC_PLATFORM_COCOA 1)
     set(GDK_QUARTZ 1)
-    pkg_check_modules(GTK_MAC gtk-mac-integration-gtk3)
+    pkg_check_modules(GTK_MAC IMPORTED_TARGET gtk-mac-integration-gtk3)
     if (GTK_MAC_FOUND)
       set(MAC_INTEGRATION 1)
       find_library(COCOA_LIBRARY Cocoa)
@@ -797,7 +764,7 @@ set(PLATFORM_OSX 1)
 set(HAVE_OSX_KEYCHAIN 1)
 endif(APPLE)
 
-if(GLIB2_VERSION VERSION_GREATER 2.46.0 OR GLIB2_VERSION VERSION_EQUAL 2.46.0)
+if(GLIB2_VERSION VERSION_GREATER_EQUAL 2.46.0)
 set(HAVE_GLIB_2_46 1)
 endif()
 
@@ -819,9 +786,6 @@ add_definitions (-DHAVE_CONFIG_H)
 
 set (CONFIG_H ${CMAKE_CURRENT_BINARY_DIR}/common/config.h)
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/common/config.h.cmake.in ${CONFIG_H})
-
-set(SCHEME_INSTALLED_SOURCE_DIR ${CMAKE_INSTALL_DATADIR}/gnucash/scm)
-set(SCHEME_INSTALLED_CACHE_DIR ${PKGLIBDIR}/scm/ccache/${GUILE_EFFECTIVE_VERSION})
 
 # The subdirectories
 add_subdirectory (borrowed)
@@ -915,7 +879,6 @@ add_custom_target(distcheck DEPENDS dist
             -D CMAKE_C_FLAGS=${CMAKE_C_FLAGS}
             -D CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
             -D GTEST_ROOT=${GTEST_ROOT}
-            -D GMOCK_ROOT=${GMOCK_ROOT}
             -P ${CMAKE_SOURCE_DIR}/common/cmake_modules/MakeDistCheck.cmake
         )
 
@@ -955,7 +918,7 @@ set_target_properties(${_MODULES} PROPERTIES
 )
 
 if (WIN32)
-  set_target_properties(gncmod-backend-xml gncmod-stylesheets PROPERTIES
+  set_target_properties(gncmod-backend-xml PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
   )
 endif()

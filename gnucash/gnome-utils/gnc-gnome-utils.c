@@ -166,33 +166,6 @@ gnc_configure_date_completion (void)
     qof_date_completion_set(dc, backmonths);
 }
 
-/* This function was copied from GTK3.22 as it was only introduced in
- * version 3.16 */
-#if !GTK_CHECK_VERSION(3,16,0)
-static void
-gtk_css_provider_load_from_resource (GtkCssProvider *css_provider,
-                                     const gchar *resource_path)
-{
-  GFile *file;
-  gchar *uri, *escaped;
-
-  g_return_if_fail (GTK_IS_CSS_PROVIDER (css_provider));
-  g_return_if_fail (resource_path != NULL);
-
-  escaped = g_uri_escape_string (resource_path,
-                  G_URI_RESERVED_CHARS_ALLOWED_IN_PATH, FALSE);
-  uri = g_strconcat ("resource://", escaped, NULL);
-  g_free (escaped);
-
-  file = g_file_new_for_uri (uri);
-  g_free (uri);
-
-  gtk_css_provider_load_from_file (css_provider, file, NULL);
-
-  g_object_unref (file);
-}
-#endif
-
 void
 gnc_add_css_file (void)
 {
@@ -775,6 +748,31 @@ gnc_gui_destroy (void)
     if (!gnome_is_initialized)
         return;
 
+    if (gnc_prefs_is_set_up())
+    {
+        gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                     GNC_PREF_DATE_FORMAT,
+                                     gnc_configure_date_format,
+                                     NULL);
+        gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                     GNC_PREF_DATE_COMPL_THISYEAR,
+                                     gnc_configure_date_completion,
+                                     NULL);
+        gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                     GNC_PREF_DATE_COMPL_SLIDING,
+                                     gnc_configure_date_completion,
+                                     NULL);
+        gnc_prefs_remove_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                     GNC_PREF_DATE_BACKMONTHS,
+                                     gnc_configure_date_completion,
+                                     NULL);
+        gnc_prefs_remove_group_cb_by_func (GNC_PREFS_GROUP_GENERAL,
+                                           gnc_gui_refresh_all,
+                                           NULL);
+
+        gnc_ui_util_remove_registered_prefs ();
+        gnc_prefs_remove_registered ();
+    }
     gnc_extensions_shutdown ();
 }
 

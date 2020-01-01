@@ -92,7 +92,7 @@ set(gtest_old_engine_LIBS
   gncmod-engine
   ${GLIB2_LDFLAGS}
   ${Boost_LIBRARIES}
-  ${GTEST_LIB})
+  gtest)
 
 set(gtest_qof_LIBS
   ${GLIB2_LDFLAGS}
@@ -101,7 +101,7 @@ set(gtest_qof_LIBS
   ${GTHREAD_LDFLAGS}
   ${ICU4C_I18N_LDFLAGS}
   ${Boost_LIBRARIES}
-  ${GTEST_LIB})
+  gtest)
 
 set(gtest_engine_INCLUDES
   ${MODULEPATH}
@@ -109,7 +109,6 @@ set(gtest_engine_INCLUDES
   ${CMAKE_BINARY_DIR}/common # for config.h
   ${CMAKE_SOURCE_DIR}/common # for platform.h
   ${GLIB2_INCLUDE_DIRS}
-  ${GTEST_INCLUDE_DIR}
   ../../../borrowed/libc
 )
 
@@ -210,51 +209,58 @@ gnc_add_test_with_guile(test-scm-query test-scm-query.cpp ENGINE_TEST_INCLUDE_DI
 
 
 set(engine_test_SCHEME
-  test-account.scm
   test-create-account.scm
-  test-split.scm
   )
 
 #list(APPEND engine_test_SCHEME  test-scm-query-import.scm) Fails
 
 set(GUILE_DEPENDS      scm-gnc-module scm-app-utils scm-scm scm-engine)
 
-gnc_add_scheme_targets(scm-test-engine-extras
-  "test-extras.scm"
-  "gnucash/engine/test/"
+gnc_add_scheme_test_targets(scm-test-engine-extras
+  "test-engine-extras.scm"
+  "tests"
   "${GUILE_DEPENDS}"
   FALSE
   )
 
 if (HAVE_SRFI64)
-  gnc_add_scheme_targets (scm-srfi64-extras
+  gnc_add_scheme_test_targets (scm-srfi64-extras
     "srfi64-extras.scm"
-    "gnucash/engine/test/"
-    "${GUILE_DEPENDS}"
+    "tests"
+    "${GUILE_DEPENDS};scm-test-engine-extras;scm-srfi64-extras"
     FALSE
     )
 
-  set(srfi64_extras_SCHEME_DIST
-    srfi64-extras.scm
-    )
+  gnc_add_scheme_deprecated_module ("gnucash engine test srfi64-extras" "tests srfi64-extras" "scm-srfi64-extras" "")
 
   set (scm_tests_with_srfi64_SOURCES
     test-business-core.scm
+    )
+
+  gnc_add_scheme_test_targets (scm-test-with-srfi64
+    "${scm_tests_with_srfi64_SOURCES}"
+    "tests"
+    "${GUILE_DEPENDS};scm-test-engine-extras;scm-srfi64-extras;gncmod-engine"
+    FALSE
     )
 
   gnc_add_scheme_tests("${scm_tests_with_srfi64_SOURCES}")
   add_dependencies(check scm-srfi64-extras)
 endif (HAVE_SRFI64)
 
-gnc_add_scheme_targets(scm-test-engine
+gnc_add_scheme_test_targets(scm-test-engine
   "${engine_test_SCHEME}"
-  ""
+  "tests"
   "${GUILE_DEPENDS};scm-test-engine-extras"
   FALSE
   )
 
 add_dependencies(check scm-test-engine)
 gnc_add_scheme_tests("${engine_test_SCHEME}")
+
+# Module interfaces deprecated in 4.x, will be removed for 5.x
+gnc_add_scheme_deprecated_module ("gnucash engine test test-extras" "tests test-engine-extras" "scm-test-engine-extras" "")
+
 
 set(test_engine_SOURCES_DIST
         dummy.cpp
@@ -310,11 +316,10 @@ set(test_engine_SOURCES_DIST
 )
 
 set(test_engine_SCHEME_DIST
-        test-account.scm
+        srfi64-extras.scm
         test-create-account.scm
-        test-extras.scm
+        test-engine-extras.scm
         test-scm-query-import.scm
-        test-split.scm
         test-business-core.scm
 )
 
@@ -323,5 +328,4 @@ set(test_engine_EXTRA_DIST
 )
 
 set_dist_list(test_engine_DIST CMakeLists.txt
-        ${srfi64_extras_SCHEME_DIST}
         ${test_engine_SOURCES_DIST} ${test_engine_SCHEME_DIST} ${test_engine_EXTRA_DIST})

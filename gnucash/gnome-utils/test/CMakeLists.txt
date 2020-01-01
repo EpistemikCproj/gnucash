@@ -16,7 +16,6 @@ set(GNOME_UTILS_GUI_TEST_INCLUDE_DIRS
   ${CMAKE_BINARY_DIR}/common
   ${CMAKE_SOURCE_DIR}/gnucash/gnome-utils
   ${CMAKE_SOURCE_DIR}/libgnucash/engine
-#  ${GTK3_INCLUDE_DIRS}
 )
 set(GNOME_UTILS_GUI_TEST_LIBS
   ${GNOME_UTILS_TEST_LIBS}
@@ -37,9 +36,9 @@ set(GUILE_DEPENDS
   gncmod-engine
 )
 
-gnc_add_scheme_targets(scm-test-load-gnome-utils-module
+gnc_add_scheme_test_targets(scm-test-load-gnome-utils-module
   "test-load-gnome-utils-module.scm"
-  "gnucash/reports"
+  "tests"
   "${GUILE_DEPENDS}"
   FALSE
 )

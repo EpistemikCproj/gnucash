@@ -63,19 +63,8 @@
 (export gnc:account-map-descendants)
 (export gnc:account-map-children)
 
-(export account-same?)                  ;deprecated
-(export account-in-list?)               ;deprecated
-(export account-in-list-pred)           ;deprecated
-(export account-in-alist)               ;deprecated
 (export account-full-name<?)
 (export accounts-get-children-depth)
-(export account-hashtable-ref)          ;deprecated
-(export account-hashtable-set!)         ;deprecated
-
-(export split-same?)                    ;deprecated
-(export split-in-list?)                 ;deprecated
-(export split-hashtable-ref)            ;deprecated
-(export split-hashtable-set!)           ;deprecated
 
 (export gnc:split-structure)
 (export gnc:make-split-scm)
@@ -126,7 +115,7 @@
 (export trans-splits)
 (export gnc:transaction-scm-onto-transaction)
 
-(load-from-path "gnc-numeric")
-(load-from-path "commodity-table")
-(load-from-path "engine-interface")
-(load-from-path "engine-utilities")
+(load-from-path "gnucash/engine/gnc-numeric")
+(load-from-path "gnucash/engine/commodity-table")
+(load-from-path "gnucash/engine/engine-interface")
+(load-from-path "gnucash/engine/engine-utilities")

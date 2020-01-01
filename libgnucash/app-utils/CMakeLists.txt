@@ -147,42 +147,20 @@ endif()
 
 install(FILES ${app_utils_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gnucash)
 
-if (WITH_OFX)
-  file(READ ${CMAKE_SOURCE_DIR}/gnucash/import-export/ofx/migratable-prefs-ofx.xml MIGRATABLE_PREFS_OFX)
-endif()
-
-if (WITH_AQBANKING)
-  file(READ ${CMAKE_SOURCE_DIR}/gnucash/import-export/aqb/migratable-prefs-aqbanking.xml MIGRATABLE_PREFS_AQBANKING)
-endif()
-
-set(MIGRATABLE_PREFS_XML ${DATADIR_BUILD}/gnucash/migratable-prefs.xml)
-file(COPY make-prefs-migration-script.xsl DESTINATION ${DATADIR_BUILD}/gnucash)
-
-configure_file(migratable-prefs.xml.in ${MIGRATABLE_PREFS_XML})
-
-install(FILES ${MIGRATABLE_PREFS_XML} DESTINATION  ${CMAKE_INSTALL_DATADIR}/gnucash)
-install(FILES make-prefs-migration-script.xsl DESTINATION  ${CMAKE_INSTALL_DATADIR}/gnucash)
-
 # And now handle scheme files
 
-set (app_utils_SCHEME_2
-    app-utils.scm
-)
-
 set (app_utils_SCHEME_1
-    hooks.scm
     business-options.scm
+    business-prefs.scm
     c-interface.scm
     date-utilities.scm
-    migrate-prefs.scm
     options.scm
     prefs.scm
-    simple-obj.scm
     fin.scm
 )
 
-set(app_utils_SCHEME_3
-    business-prefs.scm
+set (app_utils_SCHEME_2
+    app-utils.scm
 )
 
 set(GUILE_DEPENDS
@@ -197,14 +175,14 @@ gnc_add_scheme_targets(scm-gettext
   gettext.scm
   gnucash
   gncmod-app-utils
-  FALSE
+  TRUE
 )
 
 gnc_add_scheme_targets(scm-app-utils-1
   "${app_utils_SCHEME_1}"
-  ""
+  "gnucash/app-utils"
   "scm-gettext;${GUILE_DEPENDS}"
-  FALSE
+  TRUE
 )
 
 gnc_add_scheme_targets(scm-app-utils-2
@@ -214,17 +192,13 @@ gnc_add_scheme_targets(scm-app-utils-2
   FALSE
 )
 
-gnc_add_scheme_targets(scm-app-utils-3
-  "${app_utils_SCHEME_3}"
-  ""
-  "scm-app-utils-2"
-  FALSE
-)
+# Module interfaces deprecated in 4.x, will be removed for 5.x
+gnc_add_scheme_deprecated_module ("migrate-prefs" "" "" "")
+gnc_add_scheme_deprecated_module ("migrate-prefs-user" "" "" "")
 
-add_custom_target(scm-app-utils ALL DEPENDS scm-app-utils-3 scm-app-utils-2 scm-app-utils-1 scm-gettext)
+add_custom_target(scm-app-utils ALL DEPENDS scm-app-utils-2 scm-app-utils-1 scm-gettext)
 
 set_local_dist(app_utils_DIST_local
         ${app_utils_ALL_SOURCES} gettext.scm ${app_utils_SCHEME_1} ${app_utils_SCHEME_2} ${app_utils_SCHEME_3}
-        app-utils.i CMakeLists.txt gnc-help-utils.c 
-        make-prefs-migration-script.xsl migratable-prefs.xml.in README)
+        app-utils.i CMakeLists.txt gnc-help-utils.c README)
 set(app_utils_DIST ${app_utils_DIST_local} ${test_app_utils_DIST} PARENT_SCOPE)

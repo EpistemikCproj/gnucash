@@ -148,7 +148,6 @@
 (export gnc:options-get-default-section)
 (export gnc:options-copy-values)
 (export gnc:send-options)
-(export gnc:save-options)
 
 (define (gnc:option-get-value book category key)
   ;;Access an option directly
@@ -204,8 +203,6 @@
 (export incdate)
 (export decdate)
 (export incdate)
-(export gnc:time64-le-date)
-(export gnc:time64-ge-date)
 (export gnc:make-date-interval-list)
 (export gnc:make-date-list)
 (export SecDelta)
@@ -227,12 +224,7 @@
 (export gnc:reldate-get-string)
 (export gnc:reldate-get-desc)
 (export gnc:reldate-get-fn)
-(export gnc:make-reldate-hash)          ;deprecate
-(export gnc:reldate-string-db)          ;deprecate
-(export gnc:relative-date-values)       ;deprecate
-(export gnc:relative-date-hash)         ;deprecate
 (export gnc:get-absolute-from-relative-date)
-(export gnc:get-relative-date-strings)  ;deprecate
 (export gnc:get-relative-date-string)
 (export gnc:get-relative-date-desc)
 (export gnc:get-start-cal-year)
@@ -264,29 +256,13 @@
 (export gnc:get-start-next-year)
 (export gnc:get-three-months-ahead)
 
-;; hooks 
-(export gnc:hook-run-danglers)	    	;; from hooks.scm- deprecated
-(re-export gnc-hook-add-scm-dangler)
-(re-export HOOK-REPORT)
-
-;; simple-obj
-(export make-simple-class)              ;deprecate
-(export simple-obj-getter)              ;deprecate
-(export simple-obj-setter)              ;deprecate
-(export simple-obj-print)               ;deprecate
-(export simple-obj-to-list)             ;deprecate
-(export simple-obj-from-list)           ;deprecate
-(export make-simple-obj)                ;deprecate
-
 (define gnc:*kvp-option-path* (list KVP-OPTION-PATH))
 (export gnc:*kvp-option-path*)
 
-(load-from-path "c-interface")
-(load-from-path "options")
-(load-from-path "hooks")                ;deprecate
-(load-from-path "prefs")
-(load-from-path "date-utilities")
-(load-from-path "simple-obj")           ;deprecate
+(load-from-path "gnucash/app-utils/c-interface")
+(load-from-path "gnucash/app-utils/options")
+(load-from-path "gnucash/app-utils/prefs")
+(load-from-path "gnucash/app-utils/date-utilities")
 
 ;; Business options
 (define gnc:*business-label* (N_ "Business"))
@@ -338,5 +314,5 @@
 
 (export gnc:*option-section-budgeting* gnc:*option-name-default-budget*)
 
-(load-from-path "business-options")
-(load-from-path "business-prefs")
+(load-from-path "gnucash/app-utils/business-options")
+(load-from-path "gnucash/app-utils/business-prefs")

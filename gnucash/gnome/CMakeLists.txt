@@ -10,6 +10,7 @@ set (gnc_gnome_noinst_HEADERS
   dialog-billterms.h
   dialog-choose-owner.h
   dialog-customer.h
+  dialog-custom-report.h
   dialog-date-close.h
   dialog-employee.h
   dialog-fincalc.h
@@ -25,6 +26,8 @@ set (gnc_gnome_noinst_HEADERS
   dialog-payment.h
   dialog-print-check.h
   dialog-progress.h
+  dialog-report-column-view.h
+  dialog-report-style-sheet.h
   dialog-sx-editor.h
   dialog-sx-editor2.h
   dialog-sx-from-trans.h
@@ -38,13 +41,15 @@ set (gnc_gnome_noinst_HEADERS
   gnc-plugin-business.h
   gnc-plugin-register.h
   gnc-plugin-register2.h
+  gnc-plugin-report-system.h
   gnc-plugin-page-account-tree.h
   gnc-plugin-page-budget.h
   gnc-plugin-page-invoice.h
   gnc-plugin-page-owner-tree.h
-  gnc-plugin-page-sx-list.h
   gnc-plugin-page-register.h
   gnc-plugin-page-register2.h
+  gnc-plugin-page-report.h
+  gnc-plugin-page-sx-list.h
   gnc-split-reg.h
   gnc-split-reg2.h
   reconcile-view.h
@@ -52,6 +57,7 @@ set (gnc_gnome_noinst_HEADERS
   top-level.h
   window-reconcile.h
   window-reconcile2.h
+  window-report.h
   window-autoclear.h
 )
 
@@ -73,6 +79,7 @@ set (gnc_gnome_SOURCES
   dialog-choose-owner.c
   dialog-commodities.c
   dialog-customer.c
+  dialog-custom-report.c
   dialog-date-close.c
   dialog-employee.c
   dialog-fincalc.c
@@ -90,6 +97,8 @@ set (gnc_gnome_SOURCES
   dialog-price-edit-db.c
   dialog-print-check.c
   dialog-progress.c
+  dialog-report-column-view.c
+  dialog-report-style-sheet.c
   dialog-sx-editor.c
   dialog-sx-editor2.c
   dialog-sx-from-trans.c
@@ -104,13 +113,15 @@ set (gnc_gnome_SOURCES
   gnc-plugin-business.c
   gnc-plugin-register.c
   gnc-plugin-register2.c
+  gnc-plugin-report-system.c
   gnc-plugin-page-account-tree.c
   gnc-plugin-page-budget.c
   gnc-plugin-page-invoice.c
   gnc-plugin-page-owner-tree.c
-  gnc-plugin-page-sx-list.c
   gnc-plugin-page-register.c
   gnc-plugin-page-register2.c
+  gnc-plugin-page-report.c
+  gnc-plugin-page-sx-list.c
   gnc-split-reg.c
   gnc-split-reg2.c
   reconcile-view.c
@@ -118,14 +129,16 @@ set (gnc_gnome_SOURCES
   top-level.c
   window-reconcile.c
   window-reconcile2.c
+  window-report.c
   window-autoclear.c
 )
 
 set_source_files_properties (${gnc_gnome_SOURCES} PROPERTIES OBJECT_DEPENDS ${CONFIG_H})
 
 add_library (gnc-gnome ${gnc_gnome_SOURCES} ${gnc_gnome_noinst_HEADERS} ${SWIG_GNOME_C})
-target_link_libraries(gnc-gnome gncmod-gnome-search gncmod-ledger-core gncmod-report-gnome gncmod-report-system
-    gncmod-register-gnome gncmod-register-core gncmod-gnome-utils gncmod-engine PkgConfig::GTK3 ${GTK_MAC_LDFLAGS})
+target_link_libraries(gnc-gnome gncmod-gnome-search gncmod-ledger-core
+  gncmod-html gncmod-report gncmod-register-gnome gncmod-register-core
+  gncmod-gnome-utils gncmod-engine PkgConfig::GTK3 ${GTK_MAC_LDFLAGS})
 
 target_compile_definitions (gnc-gnome PRIVATE -DG_LOG_DOMAIN=\"gnc.gui\" ${GTK_MAC_CFLAGS_OTHER})
 target_compile_options(gnc-gnome PRIVATE -Wno-deprecated-declarations)
@@ -134,8 +147,8 @@ target_include_directories(gnc-gnome
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
   PRIVATE
     ${CMAKE_SOURCE_DIR}/libgnucash/app-utils/calculation
+    ${CMAKE_SOURCE_DIR}/gnucash/html
     ${CMAKE_BINARY_DIR}/gnucash/gnome-utils # for gnc-warnings.h
-    ${GTK_MAC_INCLUDE_DIRS}
 )
 
 add_dependencies (gnc-gnome swig-runtime-h)
@@ -161,30 +174,17 @@ DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/gnucash.appdata.xml.in.in ${VCS_INFO_FILE}
                              -D SRC_DIR=${CMAKE_SOURCE_DIR}
                              -P ${CMAKE_SOURCE_DIR}/cmake/configure-appdata.cmake)
 
-if (${GETTEXT_VERSION_STRING} VERSION_LESS 0.19.6)
-    # Gettext is too old to be able to merge an appdata file.
-    # Fall back to providing an unmerged (and hence untranslated) appdata file.
-    add_custom_command (
-        OUTPUT gnucash.appdata.xml
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-           ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml.in
-           ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml
-
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml.in ${VCS_INFO_FILE}
-        )
-else()
-    # FIXME: where does LC_ALL=C come from?
-    add_custom_command (
-        OUTPUT gnucash.appdata.xml
-        COMMAND ${CMAKE_COMMAND} -E env
-            LC_ALL=C
-            ${GETTEXT_MSGFMT_EXECUTABLE}
-                --xml --template ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml.in
-                -d ${CMAKE_SOURCE_DIR}/po
-                -o gnucash.appdata.xml
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml.in ${VCS_INFO_FILE}
-    )
-endif()
+# FIXME: where does LC_ALL=C come from?
+add_custom_command (
+    OUTPUT gnucash.appdata.xml
+    COMMAND ${CMAKE_COMMAND} -E env
+        LC_ALL=C
+        ${GETTEXT_MSGFMT_EXECUTABLE}
+            --xml --template ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml.in
+            -d ${CMAKE_SOURCE_DIR}/po
+            -o gnucash.appdata.xml
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml.in ${VCS_INFO_FILE}
+)
 
 add_custom_target(gnucash-appdata ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml)
 
@@ -194,28 +194,49 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gnucash.appdata.xml DESTINATION  ${CMA
 
 configure_file(gnucash.desktop.in.in gnucash.desktop.in)
 
-if (${GETTEXT_VERSION_STRING} VERSION_LESS 0.19)
-    # Gettext is too old to be able to merge a desktop file.
-    # Fall back to providing an unmerged (and hence untranslated) desktop file.
-    configure_file (${CMAKE_CURRENT_BINARY_DIR}/gnucash.desktop.in
-                    ${CMAKE_CURRENT_BINARY_DIR}/gnucash.desktop COPYONLY)
-else()
-    add_custom_command (
-        OUTPUT gnucash.desktop
-        COMMAND ${CMAKE_COMMAND} -E env
-            LC_ALL=C
-            ${GETTEXT_MSGFMT_EXECUTABLE}
-                --desktop --template gnucash.desktop.in
-                -d ${CMAKE_SOURCE_DIR}/po
-                -o gnucash.desktop
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gnucash.desktop.in
-    )
-endif()
+add_custom_command (
+    OUTPUT gnucash.desktop
+    COMMAND ${CMAKE_COMMAND} -E env
+        LC_ALL=C
+        ${GETTEXT_MSGFMT_EXECUTABLE}
+            --desktop --template gnucash.desktop.in
+            -d ${CMAKE_SOURCE_DIR}/po
+            -o gnucash.desktop
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gnucash.desktop.in
+)
 
 add_custom_target(gnucash-desktop ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/gnucash.desktop)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/gnucash.desktop DESTINATION  ${CMAKE_INSTALL_DATADIR}/applications)
 
+# Scheme
+
+set(gnome_SCHEME
+    report-menus.scm
+)
+
+set(GUILE_OUTPUT_DIR   gnucash)
+set(GUILE_DEPENDS
+    gncmod-gnome-utils
+    scm-engine
+    scm-gettext
+    scm-gnome-utils
+    scm-gnc-module
+    scm-scm
+    scm-report
+    scm-reports
+)
+
+gnc_add_scheme_targets(scm-gnome
+"${gnome_SCHEME}"
+${GUILE_OUTPUT_DIR}
+"${GUILE_DEPENDS}"
+FALSE
+)
+
+# Module interfaces deprecated in 4.x, will be removed for 5.x
+gnc_add_scheme_deprecated_module ("gnucash report report-gnome" "gnucash report-menus" "scm-gnome" "")
+
 set_dist_list(gnome_DIST
         CMakeLists.txt gnome.i gnucash.appdata.xml.in.in gnucash.desktop.in.in
-        ${gnc_gnome_noinst_HEADERS} ${gnc_gnome_SOURCES})
+        ${gnc_gnome_noinst_HEADERS} ${gnc_gnome_SOURCES} ${gnome_SCHEME})
