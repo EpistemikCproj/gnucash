@@ -13,6 +13,8 @@
       <object class="GtkBox" id="invoice_entry_vbox">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
+        <property name="margin_left">3</property>
+        <property name="margin_right">3</property>
         <property name="vexpand">True</property>
         <property name="orientation">vertical</property>
         <child>
@@ -21,6 +23,7 @@
             <property name="can_focus">False</property>
             <property name="valign">start</property>
             <property name="vexpand">False</property>
+            <property name="spacing">3</property>
             <child>
               <object class="GtkFrame" id="frame1">
                 <property name="visible">True</property>
@@ -31,7 +34,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="border_width">6</property>
-                    <property name="row_spacing">6</property>
+                    <property name="row_spacing">3</property>
                     <property name="column_spacing">6</property>
                     <child>
                       <object class="GtkLabel" id="label3">
@@ -138,18 +141,6 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="page_type_label">
-                        <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="halign">start</property>
-                        <property name="label" translatable="yes">Invoice</property>
-                      </object>
-                      <packing>
-                        <property name="left_attach">1</property>
-                        <property name="top_attach">0</property>
-                      </packing>
-                    </child>
-                    <child>
                       <object class="GtkLabel" id="label9">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
@@ -202,6 +193,36 @@
                       </packing>
                     </child>
                     <child>
+                      <object class="GtkBox">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <child>
+                          <object class="GtkLabel" id="page_type_label">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="halign">start</property>
+                            <property name="margin_left">3</property>
+                            <property name="margin_right">3</property>
+                            <property name="margin_top">3</property>
+                            <property name="margin_bottom">3</property>
+                            <property name="label" translatable="yes">Invoice</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <style>
+                          <class name="frame"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="left_attach">1</property>
+                        <property name="top_attach">0</property>
+                      </packing>
+                    </child>
+                    <child>
                       <placeholder/>
                     </child>
                   </object>
@@ -230,7 +251,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="border_width">6</property>
-                    <property name="row_spacing">6</property>
+                    <property name="row_spacing">3</property>
                     <property name="column_spacing">6</property>
                     <child>
                       <object class="GtkLabel" id="page_owner_label">
@@ -412,12 +433,12 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="border_width">3</property>
-                <property name="spacing">2</property>
+                <property name="spacing">6</property>
                 <child>
                   <object class="GtkLabel" id="label5">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Customer: </property>
+                    <property name="label" translatable="yes">Customer</property>
                     <property name="justify">right</property>
                   </object>
                   <packing>
@@ -444,7 +465,7 @@
                   <object class="GtkLabel" id="label6">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Job: </property>
+                    <property name="label" translatable="yes">Job</property>
                     <property name="justify">right</property>
                   </object>
                   <packing>
@@ -495,12 +516,12 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="border_width">3</property>
-                <property name="spacing">2</property>
+                <property name="spacing">6</property>
                 <child>
                   <object class="GtkLabel" id="label31">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Additional to Card:</property>
+                    <property name="label" translatable="yes">Additional to Card</property>
                     <property name="justify">right</property>
                   </object>
                   <packing>
@@ -608,6 +629,7 @@
                 <property name="expand">False</property>
                 <property name="fill">False</property>
                 <property name="position">0</property>
+                <property name="secondary">True</property>
               </packing>
             </child>
             <child>
@@ -711,7 +733,7 @@
                       <object class="GtkBox" id="dialog_date_opened_hbox">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="halign">start</property>
+                        <property name="hexpand">True</property>
                         <child>
                           <placeholder/>
                         </child>
@@ -742,9 +764,28 @@
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
                         <child>
-                          <object class="GtkLabel" id="dialog_type_label">
+                          <object class="GtkBox" id="dialog_type_label_hbox">
+                            <property name="visible">True</property>
                             <property name="can_focus">False</property>
-                            <property name="label" translatable="yes">Invoice</property>
+                            <child>
+                              <object class="GtkLabel" id="dialog_type_label">
+                                <property name="can_focus">False</property>
+                                <property name="halign">start</property>
+                                <property name="margin_left">3</property>
+                                <property name="margin_right">3</property>
+                                <property name="margin_top">3</property>
+                                <property name="margin_bottom">3</property>
+                                <property name="label" translatable="yes">Invoice</property>
+                              </object>
+                              <packing>
+                                <property name="expand">False</property>
+                                <property name="fill">True</property>
+                                <property name="position">0</property>
+                              </packing>
+                            </child>
+                            <style>
+                              <class name="frame"/>
+                            </style>
                           </object>
                           <packing>
                             <property name="expand">True</property>
@@ -829,7 +870,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="border_width">6</property>
-                    <property name="row_spacing">6</property>
+                    <property name="row_spacing">3</property>
                     <property name="column_spacing">6</property>
                     <child>
                       <object class="GtkLabel" id="dialog_owner_label">
@@ -887,6 +928,7 @@
                       <object class="GtkBox" id="dialog_owner_hbox">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="hexpand">True</property>
                         <child>
                           <placeholder/>
                         </child>
@@ -900,6 +942,7 @@
                       <object class="GtkBox" id="dialog_job_hbox">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="hexpand">True</property>
                         <child>
                           <placeholder/>
                         </child>
@@ -926,7 +969,7 @@
                       <object class="GtkComboBox" id="dialog_terms_menu">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="halign">start</property>
+                        <property name="hexpand">True</property>
                         <property name="model">terms_store</property>
                         <signal name="changed" handler="gnc_invoice_terms_changed_cb" swapped="no"/>
                         <child>
@@ -967,7 +1010,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="border_width">6</property>
-                    <property name="row_spacing">6</property>
+                    <property name="row_spacing">3</property>
                     <property name="column_spacing">6</property>
                     <child>
                       <object class="GtkLabel" id="label22">
@@ -999,6 +1042,7 @@
                       <object class="GtkBox" id="dialog_proj_cust_hbox">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="hexpand">True</property>
                         <child>
                           <placeholder/>
                         </child>
@@ -1012,6 +1056,7 @@
                       <object class="GtkBox" id="dialog_proj_job_hbox">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
+                        <property name="hexpand">True</property>
                         <child>
                           <placeholder/>
                         </child>
@@ -1162,6 +1207,7 @@
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="icon_name">dialog-question</property>
+                    <property name="icon_size">3</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>

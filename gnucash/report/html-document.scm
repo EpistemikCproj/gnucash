@@ -21,7 +21,7 @@
 ;; Boston, MA  02110-1301,  USA       gnu@gnu.org
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(gnc:module-load "gnucash/html" 0)
+(use-modules (gnucash html))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  <html-document> class
@@ -105,20 +105,12 @@
        (apply gnc:make-html-data-style-info rest)
        (apply gnc:make-html-markup-style-info rest))))
 
-(define (gnc:html-document-tree-collapse tree)
-  (let ((retval '()))
-    (let loop ((lst tree))
-      (for-each
-       (lambda (elt)
-         (cond
-          ((string? elt)
-           (set! retval (cons elt retval)))
-          ((not (list? elt))
-           (set! retval (cons (object->string elt) retval)))
-          (else
-           (loop elt))))
-       lst))
-    retval))
+(define (gnc:html-document-tree-collapse . tree)
+  (let lp ((e tree) (accum '()))
+    (cond ((null? e) accum)
+          ((pair? e) (fold lp accum e))
+          ((string? e) (cons e accum))
+          (else (cons (object->string e) accum)))))
 
 ;; first optional argument is "headers?"
 ;; returns the html document as a string, I think.
@@ -151,6 +143,7 @@
             ;;<guile-sitedir>/gnucash/reports/data/balsheet-eg.eguile.scm:<html>
             ;;<guile-sitedir>/gnucash/reports/data/receipt.eguile.scm:<html>
 
+            (push "<!DOCTYPE html>\n")
             (push "<html dir='auto'>\n")
             (push "<head>\n")
             (push "<meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\" />\n")
@@ -232,10 +225,7 @@
         (extra-attrib (and (pair? rest) rest)))
     ;; now generate the start tag
     (let ((tag   (gnc:html-markup-style-info-tag childinfo))
-          (attr  (gnc:html-markup-style-info-attributes childinfo))
-          (face  (gnc:html-markup-style-info-font-face childinfo))
-          (size  (gnc:html-markup-style-info-font-size childinfo))
-          (color (gnc:html-markup-style-info-font-color childinfo)))
+          (attr  (gnc:html-markup-style-info-attributes childinfo)))
 
       ;; "" tags mean "show no tag"; #f tags means use default.
       (cond ((not tag)
@@ -270,31 +260,12 @@
                   (build-first-tag (car tag))
                   (for-each add-internal-tag (cdr tag)))
                 (build-first-tag tag)))
-        ;; XXX Font styling should be done through CSS, NOT html code
-        ;; XXX Also, why is this even here?  'Font' is an html tag just like anything else,
-        ;;       so why does it have it's own custom pseudo code here?  It should be built
-        ;;       as a call to this function just like any other tag, passing face/size/color as attributes.
-        (if (or face size color)
-            (begin
-              (push "<font ")
-              (if face
-                  (begin
-                    (push "face=\"") (push face) (push "\" ")))
-              (if size
-                  (begin
-                    (push "size=\"") (push size) (push "\" ")))
-              (if color
-                  (begin
-                    (push "color=\"") (push color) (push "\" ")))
-              (push ">")))
         retval))))
 
 (define (gnc:html-document-markup-end doc markup)
   (let ((childinfo (gnc:html-document-fetch-markup-style doc markup)))
     ;; now generate the end tag
-    (let ((tag (gnc:html-markup-style-info-tag childinfo))
-          (closing-font-tag
-           (gnc:html-markup-style-info-closing-font-tag childinfo)))
+    (let ((tag (gnc:html-markup-style-info-tag childinfo)))
       ;; "" tags mean "show no tag"; #f tags means use default.
       (cond ((not tag)
              (set! tag markup))
@@ -302,8 +273,6 @@
              (set! tag #f)))
       (let* ((retval '())
              (push (lambda (l) (set! retval (cons l retval)))))
-        (if closing-font-tag
-            (push "</font>\n"))
         (if tag
             (let ((addtag (lambda (t)
                             (push "</")

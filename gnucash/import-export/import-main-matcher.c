@@ -66,6 +66,8 @@ struct _main_matcher_info
     gpointer user_data;
     GNCImportPendingMatches *pending_matches;
     GtkTreeViewColumn *account_column;
+    GtkWidget         *show_account_column;
+    GtkWidget         *show_matched_info;
     gboolean add_toggled;   // flag to indicate that add has been toggled to stop selection
 };
 
@@ -85,6 +87,7 @@ enum downloaded_cols
     DOWNLOADED_COL_ACTION_PIXBUF,
     DOWNLOADED_COL_DATA,
     DOWNLOADED_COL_COLOR,
+    DOWNLOADED_COL_ENABLE,
     NUM_DOWNLOADED_COLS
 };
 
@@ -433,6 +436,11 @@ gnc_gen_trans_assign_transfer_account (GtkTreeView *treeview,
     DEBUG("path  = %s", path_str);
     g_free (path_str);
     DEBUG("account passed in = %s", gnc_get_account_name_for_register (*new_acc));
+
+    // only allow response at the top level
+    if (gtk_tree_path_get_depth (path) != 1)
+        return;
+
     model = gtk_tree_view_get_model (treeview);
     if (gtk_tree_model_get_iter (model, &iter, path))
     {
@@ -669,7 +677,7 @@ gnc_gen_trans_onPopupMenu_cb (GtkTreeView *treeview,
 }
 
 static GtkTreeViewColumn *
-add_text_column(GtkTreeView *view, const gchar *title, int col_num)
+add_text_column(GtkTreeView *view, const gchar *title, int col_num, gboolean ellipsize)
 {
     GtkCellRenderer *renderer;
     GtkTreeViewColumn *column;
@@ -680,6 +688,9 @@ add_text_column(GtkTreeView *view, const gchar *title, int col_num)
               "text", col_num,
               "background", DOWNLOADED_COL_COLOR,
               NULL);
+
+    if (ellipsize)
+        g_object_set (renderer, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
 
     // If date column, use the time64 value for the sorting.
     if (col_num == DOWNLOADED_COL_DATE_TXT)
@@ -713,6 +724,8 @@ add_toggle_column (GtkTreeView *view, const gchar *title, int col_num,
              (title, renderer,
               "active", col_num,
               "cell-background", DOWNLOADED_COL_COLOR,
+              "activatable", DOWNLOADED_COL_ENABLE,
+              "visible", DOWNLOADED_COL_ENABLE,
               NULL);
     gtk_tree_view_column_set_sort_column_id (column, col_num);
     g_object_set (G_OBJECT(column),
@@ -729,17 +742,18 @@ gnc_gen_trans_init_view (GNCImportMainMatcher *info,
                          gboolean show_update)
 {
     GtkTreeView *view;
-    GtkListStore *store;
+    GtkTreeStore *store;
     GtkCellRenderer *renderer;
     GtkTreeViewColumn *column;
     GtkTreeSelection *selection;
 
     view = info->view;
-    store = gtk_list_store_new (NUM_DOWNLOADED_COLS, G_TYPE_STRING, G_TYPE_INT64,
+    store = gtk_tree_store_new (NUM_DOWNLOADED_COLS, G_TYPE_STRING, G_TYPE_INT64,
                                 G_TYPE_STRING, G_TYPE_STRING, G_TYPE_DOUBLE,
                                 G_TYPE_STRING, G_TYPE_STRING, G_TYPE_BOOLEAN,
                                 G_TYPE_BOOLEAN, G_TYPE_BOOLEAN, G_TYPE_STRING,
-                                GDK_TYPE_PIXBUF, G_TYPE_POINTER, G_TYPE_STRING);
+                                GDK_TYPE_PIXBUF, G_TYPE_POINTER, G_TYPE_STRING,
+                                G_TYPE_BOOLEAN);
     gtk_tree_view_set_model (view, GTK_TREE_MODEL(store));
     g_object_unref (store);
 
@@ -748,12 +762,12 @@ gnc_gen_trans_init_view (GNCImportMainMatcher *info,
 
     /* Add the columns *
      * (keep the line break below to avoid a translator comment) */
-    add_text_column (view, _("Date"), DOWNLOADED_COL_DATE_TXT);
-    info->account_column = add_text_column (view, _("Account"), DOWNLOADED_COL_ACCOUNT);
+    add_text_column (view, _("Date"), DOWNLOADED_COL_DATE_TXT, FALSE);
+    info->account_column = add_text_column (view, _("Account"), DOWNLOADED_COL_ACCOUNT, FALSE);
     gtk_tree_view_column_set_visible (info->account_column, show_account);
-    add_text_column (view, _("Amount"), DOWNLOADED_COL_AMOUNT);
-    add_text_column (view, _("Description"), DOWNLOADED_COL_DESCRIPTION);
-    add_text_column (view, _("Memo"), DOWNLOADED_COL_MEMO);
+    add_text_column (view, _("Amount"), DOWNLOADED_COL_AMOUNT, FALSE);
+    add_text_column (view, _("Description"), DOWNLOADED_COL_DESCRIPTION, FALSE);
+    add_text_column (view, _("Memo"), DOWNLOADED_COL_MEMO, TRUE);
     add_toggle_column (view,
                        /* toggle column: add new transaction */
                        _("A"), DOWNLOADED_COL_ACTION_ADD,
@@ -775,18 +789,11 @@ gnc_gen_trans_init_view (GNCImportMainMatcher *info,
              "pixbuf", DOWNLOADED_COL_ACTION_PIXBUF,
              "cell-background", DOWNLOADED_COL_COLOR,
              NULL);
-    renderer = gtk_cell_renderer_text_new();
-    gtk_tree_view_column_pack_start (column, renderer, TRUE);
-    gtk_tree_view_column_set_attributes (column, renderer,
-                                         "text", DOWNLOADED_COL_ACTION_INFO,
-                                         "background", DOWNLOADED_COL_COLOR,
-                                         NULL);
-    gtk_tree_view_column_set_sort_column_id (column, DOWNLOADED_COL_ACTION_INFO);
-    g_object_set (G_OBJECT(column),
-                  "reorderable", TRUE,
-                  "resizable", TRUE,
-                  NULL);
+
     gtk_tree_view_append_column (info->view, column);
+
+    column = add_text_column (view, _("Additional Comments"), DOWNLOADED_COL_ACTION_INFO, FALSE);
+    gtk_tree_view_column_set_sizing (column, GTK_TREE_VIEW_COLUMN_AUTOSIZE);
 
     /* default sort order */
     gtk_tree_sortable_set_sort_column_id (GTK_TREE_SORTABLE(store),
@@ -831,6 +838,11 @@ view_selection_function (GtkTreeSelection *selection,
     GNCImportMainMatcher *info = data;
 
     ENTER("view_selection_function");
+
+    // only allow response at the top level
+    if (gtk_tree_path_get_depth (path) != 1)
+        return FALSE;
+
     if (gtk_tree_model_get_iter(model, &iter, path))
     {
         gtk_tree_model_get (model, &iter, DOWNLOADED_COL_DATA, &trans_info, -1);
@@ -890,7 +902,24 @@ show_account_column_toggled_cb (GtkToggleButton *togglebutton,
                                 GNCImportMainMatcher *info)
 {
     gtk_tree_view_column_set_visible (info->account_column,
-         gtk_toggle_button_get_active (togglebutton));
+        gtk_toggle_button_get_active (togglebutton));
+}
+
+static void
+show_matched_info_toggled_cb (GtkToggleButton *togglebutton,
+                                GNCImportMainMatcher *info)
+{
+    if (gtk_toggle_button_get_active (togglebutton))
+    {
+        gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(info->show_account_column), TRUE);
+        gtk_tree_view_expand_all (info->view);
+    }
+    else
+    {
+        gtk_tree_view_column_set_visible (info->account_column,
+            gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON(info->show_account_column)));
+        gtk_tree_view_collapse_all (info->view);
+    }
 }
 
 GNCImportMainMatcher *gnc_gen_trans_list_new (GtkWidget *parent,
@@ -905,7 +934,6 @@ GNCImportMainMatcher *gnc_gen_trans_list_new (GtkWidget *parent,
     gboolean show_update;
     GtkStyleContext *stylectxt;
     GdkRGBA color;
-    GtkWidget *button;
 
     info = g_new0 (GNCImportMainMatcher, 1);
     info->pending_matches = gnc_import_PendingMatches_new();
@@ -934,10 +962,14 @@ GNCImportMainMatcher *gnc_gen_trans_list_new (GtkWidget *parent,
     info->view = GTK_TREE_VIEW(gtk_builder_get_object (builder, "downloaded_view"));
     g_assert (info->view != NULL);
 
-    button = GTK_WIDGET(gtk_builder_get_object (builder, "show_source_account_button"));
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(button), all_from_same_account);
-    g_signal_connect (G_OBJECT(button), "toggled",
+    info->show_account_column = GTK_WIDGET(gtk_builder_get_object (builder, "show_source_account_button"));
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(info->show_account_column), all_from_same_account);
+    g_signal_connect (G_OBJECT(info->show_account_column), "toggled",
                       G_CALLBACK(show_account_column_toggled_cb), info);
+
+    info->show_matched_info = GTK_WIDGET(gtk_builder_get_object (builder, "show_matched_info_button"));
+    g_signal_connect (G_OBJECT(info->show_matched_info), "toggled",
+                      G_CALLBACK(show_matched_info_toggled_cb), info);
 
     show_update = gnc_import_Settings_get_action_update_enabled (info->user_settings);
     gnc_gen_trans_init_view (info, all_from_same_account, show_update);
@@ -978,7 +1010,6 @@ GNCImportMainMatcher * gnc_gen_trans_assist_new (GtkWidget *parent,
     gboolean show_update;
     GtkStyleContext *stylectxt;
     GdkRGBA color;
-    GtkWidget *button;
 
     info = g_new0 (GNCImportMainMatcher, 1);
     info->pending_matches = gnc_import_PendingMatches_new();
@@ -1007,10 +1038,14 @@ GNCImportMainMatcher * gnc_gen_trans_assist_new (GtkWidget *parent,
     info->view = GTK_TREE_VIEW(gtk_builder_get_object (builder, "downloaded_view"));
     g_assert (info->view != NULL);
 
-    button = GTK_WIDGET(gtk_builder_get_object (builder, "show_source_account_button"));
-    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(button), all_from_same_account);
-    g_signal_connect (G_OBJECT(button), "toggled",
+    info->show_account_column = GTK_WIDGET(gtk_builder_get_object (builder, "show_source_account_button"));
+    gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON(info->show_account_column), all_from_same_account);
+    g_signal_connect (G_OBJECT(info->show_account_column), "toggled",
                       G_CALLBACK(show_account_column_toggled_cb), info);
+
+    info->show_matched_info = GTK_WIDGET(gtk_builder_get_object (builder, "show_matched_info_button"));
+    g_signal_connect (G_OBJECT(info->show_matched_info), "toggled",
+                      G_CALLBACK(show_matched_info_toggled_cb), info);
 
     show_update = gnc_import_Settings_get_action_update_enabled (info->user_settings);
     gnc_gen_trans_init_view (info, all_from_same_account, show_update);
@@ -1073,17 +1108,66 @@ get_required_color (const gchar *class_name)
 }
 
 static void
+remove_child_row (GtkTreeModel *model, GtkTreeIter *iter)
+{
+    if (gtk_tree_model_iter_has_child (model, iter))
+    {
+        GtkTreeIter  child;
+        gtk_tree_model_iter_nth_child (model, &child, iter, 0);
+        gtk_tree_store_remove (GTK_TREE_STORE(model), &child);
+    }
+}
+
+static void
+update_child_row (GNCImportMatchInfo *sel_match, GtkTreeModel *model, GtkTreeIter *iter)
+{
+    GtkTreeStore *store;
+    GtkTreeIter  child;
+    gchar *text = qof_print_date (xaccTransGetDate (sel_match->trans));
+    const gchar *ro_text;
+
+    const gchar *desc = xaccTransGetDescription (sel_match->trans);
+    const gchar *memo = xaccSplitGetMemo (sel_match->split);
+
+    store = GTK_TREE_STORE(model);
+
+    if (!gtk_tree_model_iter_has_child (model, iter))
+        gtk_tree_store_append (GTK_TREE_STORE(model), &child, iter);
+    else
+        gtk_tree_model_iter_nth_child (model, &child, iter, 0);
+
+    gtk_tree_store_set (store, &child, DOWNLOADED_COL_DATE_TXT, text, -1);
+
+    if (xaccTransCountSplits(sel_match->trans) == 2)
+        gtk_tree_store_set (store, &child, DOWNLOADED_COL_ACCOUNT, xaccAccountGetName (
+                            xaccSplitGetAccount (xaccSplitGetOtherSplit (sel_match->split))), -1);
+    else
+        gtk_tree_store_set (store, &child, DOWNLOADED_COL_ACCOUNT, _("-- Split Transaction --"), -1);
+
+    ro_text = xaccPrintAmount (xaccSplitGetAmount (sel_match->split),
+                               gnc_split_amount_print_info (sel_match->split, TRUE));
+
+    gtk_tree_store_set (store, &child, DOWNLOADED_COL_AMOUNT, ro_text, -1);
+    gtk_tree_store_set (store, &child, DOWNLOADED_COL_MEMO, memo, -1);
+    gtk_tree_store_set (store, &child, DOWNLOADED_COL_DESCRIPTION, desc, -1);
+
+    gtk_tree_store_set (store, &child, DOWNLOADED_COL_ENABLE, FALSE, -1);
+    g_free (text);
+}
+
+static void
 refresh_model_row (GNCImportMainMatcher *gui,
                    GtkTreeModel *model,
                    GtkTreeIter *iter,
                    GNCImportTransInfo *info)
 {
-    GtkListStore *store;
+    GtkTreeStore *store;
     GtkTreeSelection *selection;
     gchar *tmp, *imbalance, *text, *color;
     const gchar *ro_text;
     gchar *int_required_class, *int_prob_required_class, *int_not_required_class;
     gchar *class_extension = NULL;
+    gboolean show_pixbuf = TRUE;
     Split *split;
     time64 date;
     gnc_numeric amount;
@@ -1092,8 +1176,8 @@ refresh_model_row (GNCImportMainMatcher *gui,
     g_assert (info);
     /*DEBUG("Begin");*/
 
-    store = GTK_LIST_STORE(model);
-    gtk_list_store_set (store, iter, DOWNLOADED_COL_DATA, info, -1);
+    store = GTK_TREE_STORE(model);
+    gtk_tree_store_set (store, iter, DOWNLOADED_COL_DATA, info, -1);
 
     if (gui->dark_theme == TRUE)
         class_extension = "-dark";
@@ -1102,32 +1186,35 @@ refresh_model_row (GNCImportMainMatcher *gui,
     int_prob_required_class = g_strconcat (CSS_INT_PROB_REQUIRED_CLASS, class_extension, NULL);
     int_not_required_class = g_strconcat (CSS_INT_NOT_REQUIRED_CLASS, class_extension, NULL);
 
+    /* This controls the visibility of the toggle cells */
+    gtk_tree_store_set (store, iter, DOWNLOADED_COL_ENABLE, TRUE, -1);
+
     /*Account:*/
     split = gnc_import_TransInfo_get_fsplit (info);
     g_assert (split); // Must not be NULL
     ro_text = xaccAccountGetName (xaccSplitGetAccount (split));
-    gtk_list_store_set (store, iter, DOWNLOADED_COL_ACCOUNT, ro_text, -1);
+    gtk_tree_store_set (store, iter, DOWNLOADED_COL_ACCOUNT, ro_text, -1);
 
     /*Date*/
     date = xaccTransGetDate (gnc_import_TransInfo_get_trans (info));
     text = qof_print_date (date);
-    gtk_list_store_set (store, iter, DOWNLOADED_COL_DATE_TXT, text, -1);
-    gtk_list_store_set (store, iter, DOWNLOADED_COL_DATE_INT64, date, -1);
+    gtk_tree_store_set (store, iter, DOWNLOADED_COL_DATE_TXT, text, -1);
+    gtk_tree_store_set (store, iter, DOWNLOADED_COL_DATE_INT64, date, -1);
     g_free(text);
 
     /*Amount*/
     amount = xaccSplitGetAmount (split);
     ro_text = xaccPrintAmount (amount, gnc_split_amount_print_info (split, TRUE));
-    gtk_list_store_set (store, iter, DOWNLOADED_COL_AMOUNT, ro_text, -1);
-    gtk_list_store_set (store, iter, DOWNLOADED_COL_AMOUNT_DOUBLE, gnc_numeric_to_double (amount), -1);
+    gtk_tree_store_set (store, iter, DOWNLOADED_COL_AMOUNT, ro_text, -1);
+    gtk_tree_store_set (store, iter, DOWNLOADED_COL_AMOUNT_DOUBLE, gnc_numeric_to_double (amount), -1);
 
     /*Description*/
     ro_text = xaccTransGetDescription (gnc_import_TransInfo_get_trans (info) );
-    gtk_list_store_set (store, iter, DOWNLOADED_COL_DESCRIPTION, ro_text, -1);
+    gtk_tree_store_set (store, iter, DOWNLOADED_COL_DESCRIPTION, ro_text, -1);
 
     /*Memo*/
     ro_text = xaccSplitGetMemo (split);
-    gtk_list_store_set (store, iter, DOWNLOADED_COL_MEMO, ro_text, -1);
+    gtk_tree_store_set (store, iter, DOWNLOADED_COL_MEMO, ro_text, -1);
 
     /*Actions*/
 
@@ -1186,58 +1273,77 @@ refresh_model_row (GNCImportMainMatcher *gui,
                     g_strdup_printf (_("New, UNBALANCED (need acct to transfer %s)!"),
                                      imbalance);
             }
+            remove_child_row (model, iter);
+
             g_free (imbalance);
         }
         break;
     case GNCImport_CLEAR:
-        if (gnc_import_TransInfo_get_selected_match (info))
         {
-            color = get_required_color (int_not_required_class);
-            if (gnc_import_TransInfo_get_match_selected_manually (info) == TRUE)
+            GNCImportMatchInfo *sel_match = gnc_import_TransInfo_get_selected_match (info);
+
+            if (sel_match)
             {
-                ro_text = _("Reconcile (manual) match");
+                color = get_required_color (int_not_required_class);
+                if (gnc_import_TransInfo_get_match_selected_manually (info))
+                {
+                    ro_text = _("Reconcile (manual) match");
+                }
+                else
+                {
+                    ro_text = _("Reconcile (auto) match");
+                }
+                update_child_row (sel_match, model, iter);
             }
             else
             {
-                ro_text = _("Reconcile (auto) match");
+                color = get_required_color (int_required_class);
+                ro_text = _("Match missing!");
+                show_pixbuf = FALSE;
+                remove_child_row (model, iter);
             }
-        }
-        else
-        {
-            color = get_required_color (int_required_class);
-            ro_text = _("Match missing!");
         }
         break;
     case GNCImport_UPDATE:
-        if (gnc_import_TransInfo_get_selected_match (info))
         {
-            color = get_required_color (int_not_required_class);
-            if (gnc_import_TransInfo_get_match_selected_manually (info) == TRUE)
+            GNCImportMatchInfo *sel_match = gnc_import_TransInfo_get_selected_match (info);
+
+            if (sel_match)
             {
-                ro_text = _("Update and reconcile (manual) match");
+                color = get_required_color (int_not_required_class);
+                if (gnc_import_TransInfo_get_match_selected_manually (info))
+                {
+                    ro_text = _("Update and reconcile (manual) match");
+                }
+                else
+                {
+                    ro_text = _("Update and reconcile (auto) match");
+                }
+                update_child_row (sel_match, model, iter);
             }
             else
             {
-                ro_text = _("Update and reconcile (auto) match");
+                color = get_required_color (int_required_class);
+                ro_text = _("Match missing!");
+                show_pixbuf = FALSE;
+                remove_child_row (model, iter);
             }
-        }
-        else
-        {
-            color = get_required_color (int_required_class);
-            ro_text = _("Match missing!");
         }
         break;
     case GNCImport_SKIP:
         color = get_required_color (int_required_class);
         ro_text = _("Do not import (no action selected)");
+        show_pixbuf = FALSE;
+        remove_child_row (model, iter);
         break;
     default:
         color = "white";
         ro_text = "WRITEME, this is an unknown action";
+        show_pixbuf = FALSE;
         break;
     }
 
-    gtk_list_store_set (store, iter,
+    gtk_tree_store_set (store, iter,
                         DOWNLOADED_COL_COLOR, color,
                         DOWNLOADED_COL_ACTION_INFO, ro_text ? ro_text : text,
                         -1);
@@ -1249,54 +1355,67 @@ refresh_model_row (GNCImportMainMatcher *gui,
     g_free (int_not_required_class);
 
     /* Set the pixmaps */
-    gtk_list_store_set (store, iter,
+    gtk_tree_store_set (store, iter,
                         DOWNLOADED_COL_ACTION_ADD,
                         gnc_import_TransInfo_get_action (info) == GNCImport_ADD,
                         -1);
     if (gnc_import_TransInfo_get_action (info) == GNCImport_SKIP)
     {
-        /*Show the best match's confidence pixmap in the info column*/
-        gtk_list_store_set (store, iter,
-                            DOWNLOADED_COL_ACTION_PIXBUF,
-                            gen_probability_pixbuf (gnc_import_MatchInfo_get_probability
-                                    (gnc_import_TransInfo_get_selected_match (info)),
-                                    gui->user_settings,
-                                    GTK_WIDGET(gui->view)),
-                            -1);
+        /*If skipping the row, there is no best match's confidence pixmap*/
+        gtk_tree_store_set (store, iter, DOWNLOADED_COL_ACTION_PIXBUF, NULL, -1);
     }
 
-    gtk_list_store_set (store, iter,
+    gtk_tree_store_set (store, iter,
                         DOWNLOADED_COL_ACTION_CLEAR,
                         gnc_import_TransInfo_get_action (info) == GNCImport_CLEAR,
                         -1);
     if (gnc_import_TransInfo_get_action (info) == GNCImport_CLEAR)
     {
         /*Show the best match's confidence pixmap in the info column*/
-        gtk_list_store_set (store, iter,
-                            DOWNLOADED_COL_ACTION_PIXBUF,
-                            gen_probability_pixbuf (gnc_import_MatchInfo_get_probability
-                                    (gnc_import_TransInfo_get_selected_match (info)),
-                                    gui->user_settings,
-                                    GTK_WIDGET(gui->view)),
-                            -1);
+        if (show_pixbuf)
+            gtk_tree_store_set (store, iter,
+                                DOWNLOADED_COL_ACTION_PIXBUF,
+                                gen_probability_pixbuf (gnc_import_MatchInfo_get_probability
+                                        (gnc_import_TransInfo_get_selected_match (info)),
+                                        gui->user_settings,
+                                        GTK_WIDGET(gui->view)),
+                                -1);
+        else
+            gtk_tree_store_set (store, iter, DOWNLOADED_COL_ACTION_PIXBUF, NULL, -1);
     }
 
-    gtk_list_store_set (store, iter,
+    gtk_tree_store_set (store, iter,
                         DOWNLOADED_COL_ACTION_UPDATE,
                         gnc_import_TransInfo_get_action (info) == GNCImport_UPDATE,
                         -1);
     if (gnc_import_TransInfo_get_action (info) == GNCImport_UPDATE)
     {
         /*Show the best match's confidence pixmap in the info column*/
-        gtk_list_store_set (store, iter,
-                            DOWNLOADED_COL_ACTION_PIXBUF,
-                            gen_probability_pixbuf (gnc_import_MatchInfo_get_probability
-                                    (gnc_import_TransInfo_get_selected_match (info)),
-                                    gui->user_settings,
-                                    GTK_WIDGET(gui->view)),
-                            -1);
+        if (show_pixbuf)
+            gtk_tree_store_set (store, iter,
+                                DOWNLOADED_COL_ACTION_PIXBUF,
+                                gen_probability_pixbuf (gnc_import_MatchInfo_get_probability
+                                        (gnc_import_TransInfo_get_selected_match (info)),
+                                        gui->user_settings,
+                                        GTK_WIDGET(gui->view)),
+                                -1);
+        else
+            gtk_tree_store_set (store, iter, DOWNLOADED_COL_ACTION_PIXBUF, NULL, -1);
     }
 
+    // show child row if 'show matched info' is toggled
+    if (gtk_tree_model_iter_has_child (model, iter))
+    {
+        if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON(gui->show_matched_info)))
+        {
+            GtkTreePath *path = gtk_tree_model_get_path (model, iter);
+
+            gtk_tree_view_column_set_visible (gui->account_column, TRUE);
+
+            gtk_tree_view_expand_row (GTK_TREE_VIEW(gui->view), path, TRUE);
+            gtk_tree_path_free (path);
+        }
+    }
     selection = gtk_tree_view_get_selection (gui->view);
     gtk_tree_selection_unselect_all (selection);
 }
@@ -1339,7 +1458,7 @@ void gnc_gen_trans_list_add_trans_with_ref_id (GNCImportMainMatcher *gui, Transa
                                                  match_selected_manually);
 
         model = gtk_tree_view_get_model (gui->view);
-        gtk_list_store_append (GTK_LIST_STORE(model), &iter);
+        gtk_tree_store_append (GTK_TREE_STORE(model), &iter, NULL);
         refresh_model_row (gui, model, &iter, transaction_info);
     }
     return;

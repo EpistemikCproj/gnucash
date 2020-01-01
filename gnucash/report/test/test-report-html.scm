@@ -1,14 +1,12 @@
-(use-modules (gnucash gnc-module))
-
-(gnc:module-begin-syntax (gnc:module-load "gnucash/app-utils" 0))
-
-(use-modules (tests test-engine-extras))
+(use-modules (gnucash engine))
+(use-modules (gnucash app-utils))
 (use-modules (gnucash report))
-(use-modules (tests test-report-extras))
 (use-modules (gnucash report stylesheets plain))
 (use-modules (srfi srfi-64))
 (use-modules (ice-9 pretty-print))
 (use-modules (sxml simple))
+(use-modules (tests test-engine-extras))
+(use-modules (tests test-report-extras))
 (use-modules (tests srfi64-extras))
 (use-modules (system vm coverage))
 
@@ -45,7 +43,8 @@
 )
 
 (define html-doc-header-no-title
-"<html dir='auto'>\n\
+"<!DOCTYPE html>
+<html dir='auto'>\n\
 <head>\n\
 <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\" />\n\
 </head><body>")
@@ -87,7 +86,8 @@
 
     (gnc:html-document-set-title! test-doc "HTML Document Title")
     (test-equal "HTML Document - Render with title"
-"<html dir='auto'>\n\
+"<!DOCTYPE html>
+<html dir='auto'>\n\
 <head>\n\
 <meta http-equiv=\"content-type\" content=\"text/html; charset=utf-8\" />\n\
 <title>\n\
@@ -655,32 +655,6 @@ HTML Document Title</title></head><body></body>\n\
           )
         )
       (test-end "HTML Table - Append Rows")
-      (test-begin "HTML Table - Remove Rows")
-        (let (
-               (test-doc (gnc:make-html-document))
-               (test-table (gnc:make-html-table))
-             )
-          ;; change the default settings just to see what effect it has
-          ;;(gnc:html-table-set-col-headers! test-table #t)
-          ;; -> this make (gnc:html-table-render test-table test-doc) crash
-          ;; col-headers must be #f or a list
-          (gnc:html-table-set-row-headers! test-table #t)
-          (gnc:html-table-set-caption! test-table #t)
-          (gnc:html-table-append-row! test-table "Row 1")
-          (gnc:html-table-append-row! test-table "Row 2")
-          (gnc:html-table-remove-last-row! test-table)
-          (test-equal "HTML Table - Check Num Rows after remove row"
-            1
-            (gnc:html-table-num-rows test-table)
-          )
-          (test-equal "HTML Table - Check data after remove row"
-            '(("Row 1"))
-            (gnc:html-table-data test-table)
-          )
-          (gnc:html-table-remove-last-row! test-table)
-          (test-equal "HTML Table - Negative Test: Remove non-existing rows" '() (gnc:html-table-remove-last-row! test-table))
-        )
-      (test-end "HTML Table - Remove Rows")
       (test-begin "HTML Table - Prepend Rows")
         (let (
                (test-doc (gnc:make-html-document))
@@ -798,6 +772,66 @@ HTML Document Title</title></head><body></body>\n\
       )
     (test-end "HTML Table - Table Rendering")
 
+    (test-begin "html-table arbitrary row/col modification")
+    (let ((doc (gnc:make-html-document))
+          (table (gnc:make-html-table)))
+      (gnc:html-table-set-cell! table 0 0 "x")
+      (test-equal "html-table-set-cell! 0 0"
+        "<table><tbody><tr><td rowspan=\"1\" colspan=\"1\"><string> x</td>\n</tr>\n</tbody>\n</table>\n"
+        (string-concatenate
+         (gnc:html-document-tree-collapse
+          (gnc:html-table-render table doc))))
+
+      (gnc:html-table-set-cell! table 2 2 "y" "z")
+      (test-equal "html-table-set-cell! 2 2"
+        "<table><tbody><tr><td rowspan=\"1\" colspan=\"1\"><string> x</td>\n</tr>\n<tr></tr>\n<tr><td><string>  </td>\n<td><string>  </td>\n<td rowspan=\"1\" colspan=\"1\"><string> y<string> z</td>\n</tr>\n</tbody>\n</table>\n"
+        (string-concatenate
+         (gnc:html-document-tree-collapse
+          (gnc:html-table-render table doc))))
+
+      (let* ((table1 (gnc:make-html-table))
+             (cell (gnc:make-html-table-cell "ab")))
+        (gnc:html-table-set-cell! table1 1 4 cell)
+        (test-equal "html-table-set-cell! 1 4"
+          "<table><tbody><tr></tr>\n<tr><td><string>  </td>\n<td><string>  </td>\n<td><string>  </td>\n<td><string>  </td>\n<td rowspan=\"1\" colspan=\"1\"><string> ab</td>\n</tr>\n</tbody>\n</table>\n"
+          (string-concatenate
+           (gnc:html-document-tree-collapse
+            (gnc:html-table-render table1 doc))))
+
+        (gnc:html-table-set-cell/tag! table1 1 4 "tag" cell)
+        (test-equal "html-table-set-cell/tag! 1 4"
+          "<table><tbody><tr></tr>\n<tr><td><string>  </td>\n<td><string>  </td>\n<td><string>  </td>\n<td><string>  </td>\n<tag rowspan=\"1\" colspan=\"1\"><string> ab</tag>\n</tr>\n</tbody>\n</table>\n"
+          (string-concatenate
+           (gnc:html-document-tree-collapse
+            (gnc:html-table-render table1 doc))))))
+    (test-end "html-table arbitrary row/col modification")
+
+    (test-begin "html-table-cell renderers")
+    (let ((doc (gnc:make-html-document))
+          (cell (gnc:make-html-table-cell 4)))
+      (test-equal "html-table-cell renders correctly"
+        "<td rowspan=\"1\" colspan=\"1\"><number> 4</td>\n"
+        (string-concatenate
+         (gnc:html-document-tree-collapse
+          (gnc:html-table-cell-render cell doc)))))
+
+    ;; the following is tailor-made to test bug 797357. if the report
+    ;; system is refactored, this test will probably need fixing. it
+    ;; aims to ensure the table-cell class eg 'number-cell'
+    ;; 'total-number-cell' is augmented with a '-neg', and the
+    ;; resulting renderer renders as <td class='number-cell neg' ...>
+    (let* ((doc (gnc:make-html-document))
+           (comm-table (gnc-commodity-table-get-table (gnc-get-current-book)))
+           (USD (gnc-commodity-table-lookup comm-table "CURRENCY" "USD"))
+           (USD-neg10 (gnc:make-gnc-monetary USD -10))
+           (cell (gnc:make-html-table-cell/markup "number-cell" USD-neg10)))
+      (test-equal "html-table-cell negative-monetary -> tag gets -neg appended"
+        "number-cell-neg"
+        (cadr
+         (gnc:html-document-tree-collapse
+          (gnc:html-table-cell-render cell doc)))))
+    (test-end "html-table-cell renderers")
+
   (test-end "HTML Tables - without style sheets")
 )
 
@@ -832,9 +866,9 @@ HTML Document Title</title></head><body></body>\n\
       (gnc:html-document-set-style-sheet! doc (gnc:html-style-sheet-find "Default"))
       (gnc:html-document-add-object! doc table)
       (let ((render (gnc:html-document-render doc)))
-        (with-output-to-file (format #f "/tmp/html-acct-table-~a.html" prefix)
-          (lambda ()
-            (display render)))
+        (call-with-output-file (format #f "/tmp/html-acct-table-~a.html" prefix)
+          (lambda (p)
+            (display render p)))
         (xml->sxml render
                    #:trim-whitespace? #t
                    #:entities '((nbsp . "\xa0")

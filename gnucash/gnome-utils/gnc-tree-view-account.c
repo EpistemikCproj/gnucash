@@ -138,7 +138,7 @@ gnc_tree_view_account_class_init (GncTreeViewAccountClass *klass)
     o_class->finalize = gnc_tree_view_account_finalize;
 
     gnc_hook_add_dangler(HOOK_CURRENCY_CHANGED,
-                         (GFunc)gtva_currency_changed_cb, NULL);
+                         (GFunc)gtva_currency_changed_cb, NULL, NULL);
 }
 
 /********************************************************************\
@@ -1076,6 +1076,17 @@ gnc_tree_view_account_count_children (GncTreeViewAccount *view,
     return num_children;
 }
 
+void
+gnc_tree_view_account_clear_model_cache (GncTreeViewAccount *view)
+{
+    GtkTreeModel *model, *f_model, *s_model;
+
+    s_model = gtk_tree_view_get_model (GTK_TREE_VIEW(view));
+    f_model = gtk_tree_model_sort_get_model (GTK_TREE_MODEL_SORT(s_model));
+    model = gtk_tree_model_filter_get_model (GTK_TREE_MODEL_FILTER(f_model));
+
+    gnc_tree_model_account_clear_cache (GNC_TREE_MODEL_ACCOUNT(model));
+}
 
 /************************************************************/
 /*            Account Tree View Filter Functions            */
@@ -1882,11 +1893,28 @@ gnc_tree_view_account_add_custom_column(GncTreeViewAccount *account_view,
                                         col_edited_cb)
 {
     GtkCellRenderer *renderer;
+
+    g_return_val_if_fail(GNC_IS_TREE_VIEW_ACCOUNT(account_view), NULL);
+
+    renderer = gtk_cell_renderer_text_new();
+
+    return gnc_tree_view_account_add_custom_column_renderer(
+        account_view, column_title, col_source_cb, col_edited_cb, renderer);
+}
+
+GtkTreeViewColumn *
+gnc_tree_view_account_add_custom_column_renderer(GncTreeViewAccount *account_view,
+                                        const gchar *column_title,
+                                        GncTreeViewAccountColumnSource
+                                        col_source_cb,
+                                        GncTreeViewAccountColumnTextEdited
+                                        col_edited_cb,
+                                        GtkCellRenderer *renderer)
+{
     GtkTreeViewColumn *column;
 
     g_return_val_if_fail (GNC_IS_TREE_VIEW_ACCOUNT (account_view), NULL);
 
-    renderer = gtk_cell_renderer_text_new ();
     g_object_set (G_OBJECT (renderer), "xalign", 1.0, NULL);
 
     column = gtk_tree_view_column_new_with_attributes (column_title,

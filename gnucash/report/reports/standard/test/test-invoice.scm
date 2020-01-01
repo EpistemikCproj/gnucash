@@ -1,5 +1,5 @@
-(use-modules (gnucash gnc-module))
-(gnc:module-begin-syntax (gnc:module-load "gnucash/app-utils" 0))
+(use-modules (gnucash engine))
+(use-modules (gnucash app-utils))
 (use-modules (tests test-engine-extras))
 (use-modules (gnucash reports standard invoice))
 (use-modules (gnucash report stylesheets plain)) ; For the default stylesheet, required for rendering
@@ -105,9 +105,8 @@
         (for-each
          (lambda (disp-col-name)
            (set-option! options "Display" disp-col-name setting))
-         '("My Company" "My Company ID" "Due Date"
-           "Use Detailed Tax Summary" "Totals" "Subtotal" "References"
-           "Billing Terms" "Billing ID" "Invoice Notes"
+         '("Due Date" "Use Detailed Tax Summary" "Totals" "Subtotal"
+           "References" "Billing Terms" "Billing ID" "Invoice Notes"
            "Payments" "Job Details"))
         options))
 

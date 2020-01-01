@@ -15,6 +15,7 @@ set(scm_test_with_srfi64_SOURCES
   test-budget.scm
   test-register.scm
   test-trial-balance.scm
+  test-equity-statement.scm
   test-average-balance.scm
   test-invoice.scm
   test-owner-report.scm
@@ -30,8 +31,7 @@ set(GUILE_DEPENDS
   scm-app-utils
   scm-engine
   scm-test-engine
-  scm-gettext
-  scm-scm
+  scm-core-utils
   scm-test-report
   scm-reports
   scm-report-stylesheets

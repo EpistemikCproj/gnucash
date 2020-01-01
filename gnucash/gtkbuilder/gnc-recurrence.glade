@@ -41,6 +41,7 @@
         <property name="can_focus">False</property>
         <property name="hexpand">True</property>
         <property name="orientation">vertical</property>
+        <property name="spacing">3</property>
         <child>
           <object class="GtkBox" id="hbox218">
             <property name="visible">True</property>
@@ -103,11 +104,12 @@
           <object class="GtkBox" id="hbox219">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="spacing">6</property>
             <child>
               <object class="GtkLabel" id="label89">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">beginning on: </property>
+                <property name="label" translatable="yes">beginning on</property>
               </object>
               <packing>
                 <property name="expand">False</property>

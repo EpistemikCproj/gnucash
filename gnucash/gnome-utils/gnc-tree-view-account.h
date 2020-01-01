@@ -198,7 +198,11 @@ GtkTreeViewColumn * gnc_tree_view_account_add_custom_column(
     GncTreeViewAccount *view, const gchar *column_title,
     GncTreeViewAccountColumnSource source_cb,
     GncTreeViewAccountColumnTextEdited edited_cb);
-
+GtkTreeViewColumn *gnc_tree_view_account_add_custom_column_renderer(
+    GncTreeViewAccount *account_view, const gchar *column_title,
+    GncTreeViewAccountColumnSource col_source_cb,
+    GncTreeViewAccountColumnTextEdited col_edited_cb,
+    GtkCellRenderer *renderer);
 void gnc_tree_view_account_set_name_edited(GncTreeViewAccount *view,
         GncTreeViewAccountColumnTextEdited edited_cb);
 void gnc_tree_view_account_name_edited_cb(Account *account, GtkTreeViewColumn *col, const gchar *new_name);
@@ -342,6 +346,13 @@ void gnc_tree_view_account_refilter (GncTreeViewAccount *view);
 gint gnc_tree_view_account_count_children (GncTreeViewAccount *view,
         Account *account);
 
+/** This function clears the tree model account cache so the values will
+ *  be updated/refreshed.
+ *
+ *  @param view A pointer to an account tree view.
+ *
+ */
+void gnc_tree_view_account_clear_model_cache (GncTreeViewAccount *view);
 
 
 /** This function returns the account associated with the specified

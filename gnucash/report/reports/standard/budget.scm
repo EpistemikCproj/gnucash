@@ -27,16 +27,14 @@
 
 (define-module (gnucash reports standard budget))
 
-(use-modules (gnucash utilities))
-(use-modules (gnucash gnc-module))
-(use-modules (gnucash gettext))
-
 (use-modules (gnucash engine))
+(use-modules (gnucash utilities))
+(use-modules (gnucash core-utils))
+(use-modules (gnucash app-utils))
+(use-modules (gnucash report))
 
 (use-modules (srfi srfi-1))
-
-(gnc:module-load "gnucash/report" 0)
-(gnc:module-load "gnucash/gnome-utils" 0) ;for gnc-build-url
+(use-modules (ice-9 match))
 
 (define reportname (N_ "Budget Report"))
 
@@ -51,6 +49,8 @@
 (define optname-select-columns (N_ "Select Columns"))
 (define optname-show-budget (N_ "Show Budget"))
 (define opthelp-show-budget (N_ "Display a column for the budget values."))
+(define optname-show-notes (N_ "Show Budget Notes"))
+(define opthelp-show-notes (N_ "Display a column for the budget notes."))
 (define optname-show-actual (N_ "Show Actual"))
 (define opthelp-show-actual (N_ "Display a column for the actual values."))
 (define optname-show-difference (N_ "Show Difference"))
@@ -229,9 +229,15 @@
 
     ;; columns to display
     (add-option
-     (gnc:make-simple-boolean-option
+     (gnc:make-complex-boolean-option
       gnc:pagename-display optname-show-budget
-      "s1" opthelp-show-budget #t))
+      "s1" opthelp-show-budget #t #f
+      (lambda (x)
+        (set-option-enabled options gnc:pagename-display optname-show-notes x))))
+    (add-option
+     (gnc:make-simple-boolean-option
+      gnc:pagename-display optname-show-notes
+      "s15" opthelp-show-budget #t))
     (add-option
      (gnc:make-simple-boolean-option
       gnc:pagename-display optname-show-actual
@@ -254,6 +260,27 @@
 
     options))
 
+;; creates a footnotes collector. (make-footnote-collector) => coll
+;; (coll elt) if elt is not null or "", adds elt to store, returns
+;; html-text containing ref eg. <sup title='note'>1</sup>. calling
+;; (coll 'list) returns html-text containing <ol> of all stored elts
+(define (make-footnote-collector)
+  (let ((notes '()) (num 0))
+    (match-lambda
+      ('list
+       (let lp ((notes notes) (res '()))
+         (match notes
+           (() (gnc:make-html-text (gnc:html-markup-ol res)))
+           ((note . rest) (lp rest (cons note res))))))
+      ((or #f "") "")
+      (note
+       (set! notes (cons (gnc:html-string-sanitize note) notes))
+       (set! num (1+ num))
+       (let ((text (gnc:make-html-text
+                    " " (gnc:html-markup "sup" (number->string num)))))
+         (gnc:html-text-set-style! text "sup" 'attribute `("title" ,note))
+         text)))))
+
 ;; Create the html table for the budget report
 ;;
 ;; Parameters
@@ -269,6 +296,8 @@
          (show-actual? (get-val params 'show-actual))
          (show-budget? (get-val params 'show-budget))
          (show-diff? (get-val params 'show-difference))
+         (show-note? (get-val params 'show-note))
+         (footnotes (get-val params 'footnotes))
          (accumulate? (get-val params 'use-envelope))
          (show-totalcol? (get-val params 'show-totalcol))
          (use-ranges? (get-val params 'use-ranges))
@@ -331,8 +360,11 @@
              column-list exchange-fn)
       (let* ((comm (xaccAccountGetCommodity acct))
              (reverse-balance? (gnc-reverse-balance acct))
+             (maybe-negate (lambda (amt) (if reverse-balance? (- amt) amt)))
+             (unreversed? (gnc-using-unreversed-budgets
+                           (gnc-get-current-book))) ;fwd-compatibility
              (allperiods (filter number? (gnc:list-flatten column-list)))
-             (total-periods (if accumulate?
+             (total-periods (if (and accumulate? (not (null? allperiods)))
                                 (iota (1+ (apply max allperiods)))
                                 allperiods))
              (income-acct? (eqv? (xaccAccountGetType acct) ACCT-TYPE-INCOME)))
@@ -345,30 +377,30 @@
         ;;   bgt-val - budget value
         ;;   act-val - actual value
         ;;   dif-val - difference value
+        ;;   note    - note (string) or #f
         ;;
         ;; Returns
         ;;   col - next column
         (define (disp-cols style-tag col0
-                           bgt-val act-val dif-val)
-          (let* ((style-tag-neg (string-append style-tag "-neg"))
-                 (col1 (+ col0 (if show-budget? 1 0)))
+                           bgt-val act-val dif-val note)
+          (let* ((col1 (+ col0 (if show-budget? 1 0)))
                  (col2 (+ col1 (if show-actual? 1 0)))
                  (col3 (+ col2 (if show-diff? 1 0))))
             (if show-budget?
                 (gnc:html-table-set-cell/tag!
-                 html-table rownum col0
-                 (if (negative? bgt-val) style-tag-neg style-tag)
+                 html-table rownum col0 style-tag
                  (if (zero? bgt-val) "."
-                     (gnc:make-gnc-monetary comm bgt-val))))
+                     (gnc:make-gnc-monetary comm bgt-val))
+                 (if show-note? (footnotes note) "")))
             (if show-actual?
                 (gnc:html-table-set-cell/tag!
                  html-table rownum col1
-                 (if (negative? act-val) style-tag-neg style-tag)
+                 style-tag
                  (gnc:make-gnc-monetary comm act-val)))
             (if show-diff?
                 (gnc:html-table-set-cell/tag!
                  html-table rownum col2
-                 (if (negative? dif-val) style-tag-neg style-tag)
+                 style-tag
                  (if (and (zero? bgt-val) (zero? act-val)) "."
                      (gnc:make-gnc-monetary comm dif-val))))
             col3))
@@ -379,6 +411,19 @@
 
            ((null? column-list)
             #f)
+
+           ;; fwd-compatibility: the next cond may be removed in master
+           ((and (eq? (car column-list) 'total) unreversed?)
+            (let* ((bgt-total (maybe-negate
+                               (gnc:get-account-periodlist-budget-value
+                                budget acct total-periods)))
+                   (act-total (maybe-negate
+                               (gnc:get-account-periodlist-actual-value
+                                budget acct total-periods)))
+                   (dif-total (- bgt-total act-total)))
+              (loop (cdr column-list)
+                    (disp-cols "total-number-cell" current-col
+                               bgt-total act-total dif-total))))
 
            ((eq? (car column-list) 'total)
             (let* ((bgt-total (gnc:get-account-periodlist-budget-value
@@ -391,13 +436,33 @@
                                   (- bgt-total act-total))))
               (loop (cdr column-list)
                     (disp-cols "total-number-cell" current-col
-                               bgt-total act-total dif-total))))
+                               bgt-total act-total dif-total #f))))
+
+           ;; fwd-compatibility: the next cond may be removed in master
+           (unreversed?
+            (let* ((period-list (cond
+                                 ((list? (car column-list)) (car column-list))
+                                 (accumulate? (iota (1+ (car column-list))))
+                                 (else (list (car column-list)))))
+                   (bgt-val (maybe-negate
+                             (gnc:get-account-periodlist-budget-value
+                              budget acct period-list)))
+                   (act-val (maybe-negate
+                             (gnc:get-account-periodlist-actual-value
+                              budget acct period-list)))
+                   (dif-val (- bgt-val act-val)))
+              (loop (cdr column-list)
+                    (disp-cols "number-cell" current-col
+                               bgt-val act-val dif-val))))
 
            (else
             (let* ((period-list (cond
                                  ((list? (car column-list)) (car column-list))
                                  (accumulate? (iota (1+ (car column-list))))
                                  (else (list (car column-list)))))
+                   (note (and (= 1 (length period-list))
+                              (gnc-budget-get-account-period-note
+                               budget acct (car period-list))))
                    (bgt-val (gnc:get-account-periodlist-budget-value
                              budget acct period-list))
                    (act-abs (gnc:get-account-periodlist-actual-value
@@ -410,7 +475,7 @@
                                 (- bgt-val act-val))))
               (loop (cdr column-list)
                     (disp-cols "number-cell" current-col
-                               bgt-val act-val dif-val))))))))
+                               bgt-val act-val dif-val note))))))))
 
     ;; Adds header rows to the budget report.  The columns are
     ;; specified by the column-list parameter.
@@ -537,7 +602,9 @@
     (define (calc-periods
              budget user-start user-end collapse-before? collapse-after? show-total?)
       (define (range start end)
-        (iota (- end start) start))
+        (if (< start end)
+            (iota (- end start) start)
+            (iota (- start end) end)))
       (let* ((num-periods (gnc-budget-get-num-periods budget))
              (range-start (or user-start 0))
              (range-end (if user-end (1+ user-end) num-periods))
@@ -665,6 +732,7 @@
              (accounts (sort accounts account-full-name<?))
              (accumulate? (get-option gnc:pagename-general optname-accumulate))
              (acct-table (gnc:make-html-acct-table/env/accts env accounts))
+             (footnotes (make-footnote-collector))
              (paramsBudget
               (list
                (list 'show-actual
@@ -673,6 +741,10 @@
                      (get-option gnc:pagename-display optname-show-budget))
                (list 'show-difference
                      (get-option gnc:pagename-display optname-show-difference))
+               (list 'show-note
+                     (and (get-option gnc:pagename-display optname-show-budget)
+                          (get-option gnc:pagename-display optname-show-notes)))
+               (list 'footnotes footnotes)
                (list 'use-envelope accumulate?)
                (list 'show-totalcol
                      (get-option gnc:pagename-display optname-show-totalcol))
@@ -716,7 +788,13 @@
           ;; table width, since the add-account-balance had put stuff
           ;; there, but it doesn't seem to matter.
 
-          (gnc:html-document-add-object! doc html-table)))))
+          (gnc:html-table-set-style!
+           html-table "td"
+           'attribute '("valign" "bottom"))
+
+          (gnc:html-document-add-object! doc html-table)
+
+          (gnc:html-document-add-object! doc (footnotes 'list))))))
 
     (gnc:report-finished)
     doc))

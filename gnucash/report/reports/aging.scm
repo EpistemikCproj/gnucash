@@ -26,11 +26,11 @@
 
 (define-module (gnucash reports aging))
 
+(use-modules (gnucash engine))
 (use-modules (gnucash utilities))
-(use-modules (gnucash gnc-module))
-(use-modules (gnucash gettext))
-
-(gnc:module-load "gnucash/report" 0)
+(use-modules (gnucash core-utils))
+(use-modules (gnucash app-utils))
+(use-modules (gnucash report))
 
 (define optname-to-date (N_ "To"))
 (define optname-sort-by (N_ "Sort By"))
@@ -211,15 +211,18 @@
 	       (if (not (gnc-commodity-equiv
 			 this-currency
 			 (company-get-currency company-info)))
-		   (let ((error-str
-			  (string-append "IGNORING TRANSACTION!\n" "Invoice Owner: " (gncOwnerGetName owner)
-					 "\nTransaction GUID:" (gncTransGetGuid transaction)
-					 "\nTransaction Currency" (gnc-commodity-get-mnemonic this-currency)
-					 "\nClient Currency" (gnc-ommodity-get-mnemonic(company-get-currency company-info)))))
-		     (gnc-error-dialog '() error-str)
-		     (gnc:error error-str)
-		     (cons #f (format
-			       (_ "Transactions relating to '~a' contain \
+                   (let ((error-str
+                          (string-append "IGNORING TRANSACTION!\n" "Invoice Owner: " (gnc:strify owner)
+                                         "\nTransaction:" (gnc:strify transaction)
+                                         "\nSplits are:\n"
+                                         (string-join
+                                          (map gnc:strify (xaccTransGetSplitList transaction))
+                                          "\n")
+                                         "\nTransaction Currency:" (gnc:strify this-currency)
+                                         "\nClient Currency:" (gnc:strify (company-get-currency company-info)))))
+                     (gnc-error-dialog '() error-str)
+                     (gnc:error error-str)
+                     (cons #f (format #f (_ "Transactions relating to '~a' contain \
 more than one currency. This report is not designed to cope with this possibility.")  (gncOwnerGetName owner))))
 		   (begin
 		     (gnc:debug "it's an old company")

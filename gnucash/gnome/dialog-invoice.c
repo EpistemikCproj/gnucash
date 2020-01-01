@@ -153,6 +153,7 @@ struct _invoice_window
     GtkWidget  * info_label; /*Default in glade is "Invoice Information"*/
     GtkWidget  * id_label; /* Default in glade is Invoice ID */
     GtkWidget  * type_label;
+    GtkWidget  * type_label_hbox;
     GtkWidget  * type_hbox;
     GtkWidget  * type_choice;
     GtkWidget  * id_entry;
@@ -1918,13 +1919,13 @@ gnc_invoice_update_window (InvoiceWindow *iw, GtkWidget *widget)
 
         /* Setup viewer for read-only access */
         gtk_widget_set_sensitive (acct_entry, FALSE);
-        gtk_widget_set_sensitive (iw->id_entry, FALSE);
+        gtk_widget_set_sensitive (iw->id_entry, FALSE); /* XXX: why set FALSE and then TRUE? */
         gtk_widget_set_sensitive (iw->id_entry, TRUE);
         gtk_widget_set_sensitive (iw->terms_menu, FALSE);
-        gtk_widget_set_sensitive (iw->owner_box, FALSE);
-        gtk_widget_set_sensitive (iw->job_box, FALSE);
+        gtk_widget_set_sensitive (iw->owner_box, TRUE);
+        gtk_widget_set_sensitive (iw->job_box, TRUE);
         gtk_widget_set_sensitive (iw->billing_id_entry, FALSE);
-        gtk_widget_set_sensitive (iw->notes_text, FALSE); /* XXX: should notes remain writable?*/
+        gtk_widget_set_sensitive (iw->notes_text, TRUE);
     }
     else           /* ! posted */
     {
@@ -2584,6 +2585,7 @@ gnc_invoice_window_new_invoice (GtkWindow *parent, InvoiceDialogType dialog_type
 
     /* Grab the widgets */
     iw->type_label = GTK_WIDGET (gtk_builder_get_object (builder, "dialog_type_label"));
+    iw->type_label_hbox = GTK_WIDGET (gtk_builder_get_object (builder, "dialog_type_label_hbox"));
     iw->id_label = GTK_WIDGET (gtk_builder_get_object (builder, "label14"));
     iw->info_label = GTK_WIDGET (gtk_builder_get_object (builder, "label1"));
     invoice_radio = GTK_WIDGET (gtk_builder_get_object (builder, "dialog_invoice_type"));
@@ -2617,10 +2619,12 @@ gnc_invoice_window_new_invoice (GtkWindow *parent, InvoiceDialogType dialog_type
     case NEW_INVOICE:
     case DUP_INVOICE:
         gtk_widget_show_all (iw->type_hbox);
+        gtk_widget_hide (iw->type_label_hbox);
         gtk_widget_hide (iw->type_label);
         break;
     case MOD_INVOICE:
         gtk_widget_hide (iw->type_hbox);
+        gtk_widget_show (iw->type_label_hbox);
         gtk_widget_show (iw->type_label);
         break;
     default:

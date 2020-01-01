@@ -25,11 +25,12 @@
 ;; depends must be outside module scope -- and should eventually go away.
 (define-module (gnucash reports standard category-barchart))
 (use-modules (srfi srfi-1))
+(use-modules (srfi srfi-9))
+(use-modules (gnucash engine))
 (use-modules (gnucash utilities))
-(use-modules (gnucash gnc-module))
-(use-modules (gnucash gettext))
-
-(gnc:module-load "gnucash/report" 0)
+(use-modules (gnucash core-utils))
+(use-modules (gnucash app-utils))
+(use-modules (gnucash report))
 
 ;; The option names are defined here to 1. save typing and 2. avoid
 ;; spelling errors. The *reportnames* are defined here (and not only
@@ -260,7 +261,6 @@ developing over time"))
          (show-table? (get-option gnc:pagename-display (N_ "Show table")))
          (document (gnc:make-html-document))
          (chart (gnc:make-html-chart))
-         (table (gnc:make-html-table))
          (topl-accounts (gnc:filter-accountlist-type
                          account-types
                          (gnc-account-get-children-sorted
@@ -350,18 +350,19 @@ developing over time"))
           (define account-balances-alist
             (map
              (lambda (acc)
-               (let ((ignore-closing? (not (gnc:account-is-inc-exp? acc))))
+               (let* ((comm (xaccAccountGetCommodity acc))
+                      (split->elt (if reverse-balance?
+                                      (lambda (s)
+                                        (gnc:make-gnc-monetary
+                                         comm (- (xaccSplitGetNoclosingBalance s))))
+                                      (lambda (s)
+                                        (gnc:make-gnc-monetary
+                                         comm (xaccSplitGetNoclosingBalance s))))))
                  (cons acc
-                       (map
-                        (if (reverse-balance? acc) gnc:monetary-neg identity)
-                        (gnc:account-get-balances-at-dates
-                         acc dates-list
-                         #:split->amount
-                         (lambda (s)
-                           (and (or ignore-closing?
-                                    (not (xaccTransGetIsClosingTxn
-                                          (xaccSplitGetParent s))))
-                                (xaccSplitGetAmount s))))))))
+                       (gnc:account-accumulate-at-dates
+                        acc dates-list
+                        #:split->elt split->elt
+                        #:nosplit->elt (gnc:make-gnc-monetary comm 0)))))
              ;; all selected accounts (of report-specific type), *and*
              ;; their descendants (of any type) need to be scanned.
              (gnc:accounts-and-all-descendants accounts)))
@@ -470,38 +471,28 @@ developing over time"))
           (set! work-to-do (count-accounts 1 topl-accounts))
 
           ;; Sort the account list according to the account code field.
-          (set! all-data (sort
-                          (filter (lambda (l)
-                                    (not (zero?
-                                          (gnc:gnc-monetary-amount
-                                           (apply gnc:monetary+ (cadr l))))))
-                                  (traverse-accounts 1 topl-accounts))
-                          (cond
-                           ((eq? sort-method 'acct-code)
-                            (lambda (a b)
-                              (string<? (xaccAccountGetCode (car a))
-                                        (xaccAccountGetCode (car b)))))
-                           ((eq? sort-method 'alphabetical)
-                            (lambda (a b)
-                              (string<? ((if show-fullname?
-                                             gnc-account-get-full-name
-                                             xaccAccountGetName) (car a))
-                                        ((if show-fullname?
-                                             gnc-account-get-full-name
-                                             xaccAccountGetName) (car b)))))
-                           (else
-                            (lambda (a b)
-                              (> (gnc:gnc-monetary-amount (apply gnc:monetary+ (cadr a)))
-                                 (gnc:gnc-monetary-amount (apply gnc:monetary+ (cadr b)))))))))
-          ;; Or rather sort by total amount?
-          ;;(< (apply + (cadr a))
-          ;;   (apply + (cadr b))))))
-          ;; Other sort criteria: max. amount, standard deviation of amount,
-          ;; min. amount; ascending, descending. FIXME: Add user options to
-          ;; choose sorting.
-
-
-          ;;(gnc:warn "all-data" all-data)
+          (set! all-data
+            (sort
+             (filter (lambda (l)
+                       (not (zero? (gnc:gnc-monetary-amount
+                                    (apply gnc:monetary+ (cadr l))))))
+                     (traverse-accounts 1 topl-accounts))
+             (case sort-method
+               ((alphabetical)
+                (lambda (a b)
+                  (if show-fullname?
+                      (string<? (gnc-account-get-full-name (car a))
+                                (gnc-account-get-full-name (car b)))
+                      (string<? (xaccAccountGetName (car a))
+                                (xaccAccountGetName (car b))))))
+               ((acct-code)
+                (lambda (a b)
+                  (string<? (xaccAccountGetCode (car a))
+                            (xaccAccountGetCode (car b)))))
+               ((amount)
+                (lambda (a b)
+                  (> (gnc:gnc-monetary-amount (apply gnc:monetary+ (cadr a)))
+                     (gnc:gnc-monetary-amount (apply gnc:monetary+ (cadr b)))))))))
 
           ;; Proceed if the data is non-zeros
           (if
@@ -610,62 +601,51 @@ developing over time"))
 
              (gnc:report-percent-done 98)
              (gnc:html-document-add-object! document chart)
-             (if show-table?
-                 (let ((scu (gnc-commodity-get-fraction report-currency)))
-                   (gnc:html-table-append-column! table date-string-list)
 
-                   (for-each
+             (when show-table?
+               (let ((table (gnc:make-html-table))
+                     (scu (gnc-commodity-get-fraction report-currency))
+                     (cols>1? (> (length all-data) 1)))
+
+                 (define (make-cell contents)
+                   (gnc:make-html-table-cell/markup "number-cell" contents))
+
+                 (define (monetary-round mon)
+                   (gnc:make-gnc-monetary
+                    report-currency
+                    (gnc-numeric-convert
+                     (gnc:gnc-monetary-amount mon)
+                     scu GNC-HOW-RND-ROUND)))
+
+                 (for-each
+                  (lambda (date row)
+                    (gnc:html-table-append-row!
+                     table (map make-cell (append (list date)
+                                                  (map monetary-round row)
+                                                  (if cols>1?
+                                                      (list
+                                                       (monetary-round
+                                                        (apply gnc:monetary+ row)))
+                                                      '())))))
+                  date-string-list
+                  (apply zip (map cadr all-data)))
+
+                 (gnc:html-table-set-col-headers!
+                  table
+                  (append
+                   (list (_ "Date"))
+                   (map
                     (lambda (col)
-                      (gnc:html-table-append-column!
-                       table
-                       (map
-                        (lambda (mon)
-                          (gnc:make-gnc-monetary
-                           report-currency
-                           (gnc-numeric-convert
-                            (gnc:gnc-monetary-amount mon)
-                            scu GNC-HOW-RND-ROUND)))
-                        col)))
-                    (map cadr all-data))
+                      (cond
+                       ((string? col) col)
+                       (show-fullname? (gnc-account-get-full-name col))
+                       (else (xaccAccountGetName col))))
+                    (map car all-data))
+                   (if cols>1?
+                       (list (_ "Grand Total"))
+                       '())))
 
-                   (gnc:html-table-set-col-headers!
-                    table
-                    (append
-                     (list (_ "Date"))
-                     (map (lambda (pair)
-                            (if (string? (car pair))
-                                (car pair)
-                                ((if show-fullname?
-                                     gnc-account-get-full-name
-                                     xaccAccountGetName) (car pair))))
-                          all-data)
-                     (if (> (gnc:html-table-num-columns table) 2)
-                         (list (_ "Grand Total"))
-                         '())))
-
-                   (if (> (gnc:html-table-num-columns table) 2)
-                       (letrec
-                           ((sumtot
-                             (lambda (row)
-                               (if (null? row)
-                                   '()
-                                   (cons (sumrow (car row)) (sumtot (cdr row))))))
-                            (sumrow
-                             (lambda (row)
-                               (if (not (null? row))
-                                   (gnc:monetary+ (car row) (sumrow (cdr row)))
-                                   (gnc:make-gnc-monetary report-currency 0)))))
-                         (gnc:html-table-append-column!
-                          table
-                          (sumtot (apply zip (map cadr all-data))))))
-                   ;; set numeric columns to align right
-                   (for-each
-                    (lambda (col)
-                      (gnc:html-table-set-col-style!
-                       table col "td"
-                       'attribute (list "class" "number-cell")))
-                    '(1 2 3 4 5 6 7 8 9 10 11 12 13 14))
-                   (gnc:html-document-add-object! document table))))
+                 (gnc:html-document-add-object! document table))))
 
            ;; else if empty data
            (gnc:html-document-add-object!
@@ -682,39 +662,62 @@ developing over time"))
     (gnc:report-finished)
     document))
 
+(define-record-type :variant
+  (make-variant reportname acct-types intervals? menuname menutip reverse? uuid)
+  variant?
+  (reportname get-reportname)
+  (acct-types get-acct-types)
+  (intervals? get-intervals?)
+  (menuname   get-menuname)
+  (menutip    get-menutip)
+  (reverse?   get-reverse?)
+  (uuid       get-uuid))
+
+(define variants
+  (list
+   (make-variant reportname-income
+                 (list ACCT-TYPE-INCOME)
+                 #t menuname-income menutip-income
+                 #t category-barchart-income-uuid)
+
+   (make-variant reportname-expense
+                 (list ACCT-TYPE-EXPENSE)
+                 #t menuname-expense menutip-expense
+                 #f category-barchart-expense-uuid)
+
+   (make-variant reportname-assets
+                 (list ACCT-TYPE-ASSET ACCT-TYPE-BANK ACCT-TYPE-CASH ACCT-TYPE-CHECKING
+                       ACCT-TYPE-SAVINGS ACCT-TYPE-MONEYMRKT
+                       ACCT-TYPE-RECEIVABLE ACCT-TYPE-STOCK ACCT-TYPE-MUTUAL
+                       ACCT-TYPE-CURRENCY)
+                 #f menuname-assets menutip-assets
+                 #f category-barchart-asset-uuid)
+
+   (make-variant reportname-liabilities
+                 (list ACCT-TYPE-LIABILITY ACCT-TYPE-PAYABLE ACCT-TYPE-CREDIT
+                       ACCT-TYPE-CREDITLINE)
+                 #f menuname-liabilities menutip-liabilities
+                 #t category-barchart-liability-uuid)))
+
 (for-each
- (lambda (l)
-   (let ((tip-and-rev (cddddr l)))
-     (gnc:define-report
-      'version 1
-      'name (car l)
-      'report-guid (car (reverse l))
-      'menu-path (if (caddr l)
-                     (list gnc:menuname-income-expense)
-                     (list gnc:menuname-asset-liability))
-      'menu-name (cadddr l)
-      'menu-tip (car tip-and-rev)
-      'options-generator (lambda () (options-generator (cadr l)
-                                                       (cadr tip-and-rev)
-                                                       (caddr l)))
-      'renderer (lambda (report-obj)
-                  (category-barchart-renderer report-obj
-                                              (car l)
-                                              (car (reverse l))
-                                              (cadr l)
-                                              (caddr l))))))
- (list
-  ;; reportname, account-types, do-intervals?,
-  ;; menu-reportname, menu-tip
-  (list reportname-income (list ACCT-TYPE-INCOME) #t menuname-income menutip-income (lambda (x) #t) category-barchart-income-uuid)
-  (list reportname-expense (list ACCT-TYPE-EXPENSE) #t menuname-expense menutip-expense (lambda (x) #f) category-barchart-expense-uuid)
-  (list reportname-assets
-        (list ACCT-TYPE-ASSET ACCT-TYPE-BANK ACCT-TYPE-CASH ACCT-TYPE-CHECKING
-              ACCT-TYPE-SAVINGS ACCT-TYPE-MONEYMRKT
-              ACCT-TYPE-RECEIVABLE ACCT-TYPE-STOCK ACCT-TYPE-MUTUAL
-              ACCT-TYPE-CURRENCY)
-        #f menuname-assets menutip-assets (lambda (x) #f) category-barchart-asset-uuid)
-  (list reportname-liabilities
-        (list ACCT-TYPE-LIABILITY ACCT-TYPE-PAYABLE ACCT-TYPE-CREDIT
-              ACCT-TYPE-CREDITLINE)
-        #f menuname-liabilities menutip-liabilities (lambda (x) #t) category-barchart-liability-uuid)))
+ (lambda (variant)
+   (gnc:define-report
+    'version 1
+    'name (get-reportname variant)
+    'report-guid (get-uuid variant)
+    'menu-path (if (get-intervals? variant)
+                   (list gnc:menuname-income-expense)
+                   (list gnc:menuname-asset-liability))
+    'menu-name (get-menuname variant)
+    'menu-tip (get-menutip variant)
+    'options-generator (lambda ()
+                         (options-generator (get-acct-types variant)
+                                            (get-reverse? variant)
+                                            (get-intervals? variant)))
+    'renderer (lambda (report-obj)
+                (category-barchart-renderer report-obj
+                                            (get-reportname variant)
+                                            (get-uuid variant)
+                                            (get-acct-types variant)
+                                            (get-intervals? variant)))))
+ variants)

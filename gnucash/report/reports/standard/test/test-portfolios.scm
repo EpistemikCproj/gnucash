@@ -1,5 +1,5 @@
-(use-modules (gnucash gnc-module))
-(gnc:module-begin-syntax (gnc:module-load "gnucash/app-utils" 0))
+(use-modules (gnucash engine))
+(use-modules (gnucash app-utils))
 (use-modules (tests test-engine-extras))
 (use-modules (gnucash reports standard portfolio))
 (use-modules (gnucash reports standard advanced-portfolio))
@@ -56,9 +56,6 @@
         (test-assert (format #f "wrong-option ~a ~a" section name) #f))))
 
 (define (teardown)
-  (gnc-pricedb-destroy
-   (gnc-pricedb-get-db
-    (gnc-get-current-book)))
   (gnc-clear-current-session))
 
 (define (null-test variant uuid)

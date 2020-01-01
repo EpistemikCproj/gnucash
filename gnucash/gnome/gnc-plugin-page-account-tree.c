@@ -602,6 +602,8 @@ gnc_plugin_page_account_refresh_cb (GHashTable *changes, gpointer user_data)
         return;
 
     priv = GNC_PLUGIN_PAGE_ACCOUNT_TREE_GET_PRIVATE(page);
+
+    gnc_tree_view_account_clear_model_cache (GNC_TREE_VIEW_ACCOUNT(priv->tree_view));
     gtk_widget_queue_draw(priv->widget);
 }
 
@@ -1325,6 +1327,7 @@ gppat_setup_account_selector (GtkBuilder *builder, GtkWidget *dialog,
     GtkWidget *box = GTK_WIDGET(gtk_builder_get_object (builder, hbox));
 
     gtk_box_pack_start (GTK_BOX(box), selector, TRUE, TRUE, 0);
+    gnc_account_sel_set_hexpand (GNC_ACCOUNT_SEL(selector), TRUE);
     g_object_set_data(G_OBJECT(dialog), sel_name, selector);
 
     gppat_populate_gas_list(dialog, GNC_ACCOUNT_SEL(selector), TRUE);
@@ -1671,6 +1674,8 @@ gnc_plugin_page_account_tree_cmd_refresh (GtkAction *action,
     g_return_if_fail(GNC_IS_PLUGIN_PAGE_ACCOUNT_TREE(page));
 
     priv = GNC_PLUGIN_PAGE_ACCOUNT_TREE_GET_PRIVATE(page);
+
+    gnc_tree_view_account_clear_model_cache (GNC_TREE_VIEW_ACCOUNT(priv->tree_view));
     gtk_widget_queue_draw (priv->widget);
 }
 

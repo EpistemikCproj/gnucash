@@ -27,11 +27,13 @@
 
 
 (define-module (gnucash reports example average-balance))
-(use-modules (srfi srfi-1))
+
+(use-modules (gnucash engine))
 (use-modules (gnucash utilities))
-(use-modules (gnucash gnc-module))
-(use-modules (gnucash gettext))
-(gnc:module-load "gnucash/report" 0)
+(use-modules (gnucash core-utils))
+(use-modules (gnucash app-utils))
+(use-modules (gnucash report))
+(use-modules (srfi srfi-1))
 
 (define reportname (N_ "Average Balance"))
 
@@ -467,7 +469,8 @@
           ;; make a table (optionally)
 	  (gnc:report-percent-done 80)
           (if show-table? 
-              (let ((table (gnc:make-html-table)))
+              (let ((table (gnc:make-html-table))
+                    (scu (gnc-commodity-get-fraction report-currency)))
                 (gnc:html-table-set-col-headers!
                  table columns)
                 (for-each
@@ -479,7 +482,14 @@
                      (list "date-cell" "date-cell"
                            "number-cell" "number-cell" "number-cell"
                            "number-cell" "number-cell" "number-cell")
-                     row)))
+                     (cons* (car row)
+                            (cadr row)
+                            (map
+                             (lambda (amt)
+                               (gnc:make-gnc-monetary
+                                report-currency
+                                (gnc-numeric-convert amt scu GNC-RND-ROUND)))
+                             (cddr row))))))
                  data)
                 (gnc:html-document-add-object! document table))))
 

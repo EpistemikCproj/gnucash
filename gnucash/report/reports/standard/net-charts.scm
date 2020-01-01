@@ -28,13 +28,12 @@
 
 (define-module (gnucash reports standard net-charts))
 
+(use-modules (gnucash engine))
+(use-modules (gnucash utilities))
+(use-modules (gnucash core-utils))
+(use-modules (gnucash app-utils))
+(use-modules (gnucash report))
 (use-modules (srfi srfi-1))
-(use-modules (gnucash utilities)) 
-(use-modules (gnucash gnc-module))
-(use-modules (gnucash gettext))
-
-(gnc:module-load "gnucash/report" 0)
-
 
 (define optname-from-date (N_ "Start Date"))
 (define optname-to-date (N_ "End Date"))
@@ -238,16 +237,14 @@
     ;; gets an account alist balances
     ;; output: (list acc bal0 bal1 bal2 ...)
     (define (account->balancelist account)
-      (let ((ignore-closing? (not (gnc:account-is-inc-exp? account))))
+      (let ((comm (xaccAccountGetCommodity account)))
         (cons account
-              (gnc:account-get-balances-at-dates
+              (gnc:account-accumulate-at-dates
                account dates-list
-               #:split->amount
-               (lambda (s)
-                 (and (or ignore-closing?
-                          (not (xaccTransGetIsClosingTxn
-                                (xaccSplitGetParent s))))
-                      (xaccSplitGetAmount s)))))))
+               #:split->elt (lambda (s)
+                              (gnc:make-gnc-monetary
+                               comm (xaccSplitGetNoclosingBalance s)))
+               #:nosplit->elt (gnc:make-gnc-monetary comm 0)))))
 
     ;; This calculates the balances for all the 'account-balances' for
     ;; each element of the list 'dates'. Uses the collector->monetary

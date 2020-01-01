@@ -51,13 +51,13 @@
 #include "Account.h"
 #include "Transaction.h"
 #include "gnc-engine.h"
+#include "gnc-features.h"
 #include "gnc-euro.h"
 #include "gnc-hooks.h"
+#include "gnc-locale-tax.h"
 #include "gnc-session.h"
 #include "engine-helpers.h"
 #include "gnc-locale-utils.h"
-#include "gnc-component-manager.h"
-#include "gnc-features.h"
 #include "gnc-guile-utils.h"
 
 #define GNC_PREF_CURRENCY_CHOICE_LOCALE "currency-choice-locale"
@@ -177,6 +177,23 @@ gnc_reverse_balance (const Account *account)
         gnc_reverse_balance_init ();
 
     return reverse_type[type];
+}
+
+gboolean gnc_using_unreversed_budgets (QofBook* book)
+{
+    return gnc_features_check_used (book, GNC_FEATURE_BUDGET_UNREVERSED);
+}
+
+/* similar to gnc_reverse_balance but also accepts a gboolean
+   unreversed which specifies the reversal strategy - FALSE = pre-4.x
+   always-assume-credit-accounts, TRUE = all amounts unreversed */
+gboolean
+gnc_reverse_budget_balance (const Account *account, gboolean unreversed)
+{
+    if (unreversed == gnc_using_unreversed_budgets(gnc_account_get_book(account)))
+        return gnc_reverse_balance (account);
+
+    return FALSE;
 }
 
 
@@ -414,44 +431,6 @@ gnc_get_current_book_tax_type (void)
     }
 }
 
-/** Calls gnc_book_option_num_field_source_change to initiate registered
-  * callbacks when num_field_source book option changes so that
-  * registers/reports can update themselves; sets feature flag */
-void
-gnc_book_option_num_field_source_change_cb (gboolean num_action)
-{
-    gnc_suspend_gui_refresh ();
-    if (num_action)
-    {
-    /* Set a feature flag in the book for use of the split action field as number.
-     * This will prevent older GnuCash versions that don't support this feature
-     * from opening this file. */
-        gnc_features_set_used (gnc_get_current_book(),
-                                                GNC_FEATURE_NUM_FIELD_SOURCE);
-    }
-    gnc_book_option_num_field_source_change (num_action);
-    gnc_resume_gui_refresh ();
-}
-
-/** Calls gnc_book_option_book_currency_selected to initiate registered
-  * callbacks when currency accounting book option changes to book-currency so
-  * that registers/reports can update themselves; sets feature flag */
-void
-gnc_book_option_book_currency_selected_cb (gboolean use_book_currency)
-{
-    gnc_suspend_gui_refresh ();
-    if (use_book_currency)
-    {
-    /* Set a feature flag in the book for use of book currency. This will
-     * prevent older GnuCash versions that don't support this feature from
-     * opening this file. */
-        gnc_features_set_used (gnc_get_current_book(),
-                                GNC_FEATURE_BOOK_CURRENCY);
-    }
-    gnc_book_option_book_currency_selected (use_book_currency);
-    gnc_resume_gui_refresh ();
-}
-
 /** Returns TRUE if both book-currency and default gain/loss policy KVPs exist
   * and are valid and trading accounts are not used. */
 gboolean
@@ -665,14 +644,9 @@ gnc_ui_account_get_tax_info_string (const Account *account)
 
         if (get_form == SCM_UNDEFINED)
         {
-            GNCModule module;
             const gchar *tax_module;
-            /* load the tax info
-               Note that the module "gnucash/locale/tax" will handle selecting
-               the proper locale specific tax info */
-            module = gnc_module_load ("gnucash/locale/tax", 0);
-
-            g_return_val_if_fail (module, NULL);
+            /* load the tax info */
+            gnc_locale_tax_init ();
 
             get_form = scm_c_eval_string
                        ("(false-if-exception gnc:txf-get-form)");
@@ -1540,18 +1514,9 @@ PrintAmountInternal(char *buf, gnc_numeric val, const GNCPrintAmountInfo *info)
         val = gnc_numeric_convert(val, denom, GNC_HOW_RND_ROUND_HALF_UP);
         value_is_decimal = gnc_numeric_to_decimal(&val, NULL);
     }
-    /* Force at least auto_decimal_places zeros */
-    if (auto_decimal_enabled)
-    {
-        min_dp = MAX(auto_decimal_places, info->min_decimal_places);
-        max_dp = MAX(auto_decimal_places, info->max_decimal_places);
-    }
-    else
-    {
-        min_dp = info->min_decimal_places;
-        max_dp = info->max_decimal_places;
-    }
-
+    min_dp = info->min_decimal_places;
+    max_dp = info->max_decimal_places;
+    
     /* Don to limit the number of decimal places _UNLESS_ force_fit is
      * true. */
     if (!info->force_fit)

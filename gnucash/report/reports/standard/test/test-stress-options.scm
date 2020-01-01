@@ -1,8 +1,8 @@
 (use-modules (ice-9 textual-ports))
 (use-modules (ice-9 popen))
+(use-modules (gnucash engine))
 (use-modules (gnucash utilities))
-(use-modules (gnucash gnc-module))
-(gnc:module-begin-syntax (gnc:module-load "gnucash/app-utils" 0))
+(use-modules (gnucash app-utils))
 (use-modules (tests test-engine-extras))
 (use-modules (gnucash reports standard view-column))
 (use-modules (gnucash report stylesheets plain)) ; For the default stylesheet, required for rendering
@@ -267,6 +267,8 @@
 
 (define (tests)
   (run-tests "with empty book")
-  (create-test-data)
+  (let ((env (create-test-env))
+        (account-alist (create-test-data)))
+    (gnc:create-budget-and-transactions env account-alist))
   (create-test-invoice-data)
   (run-tests "on a populated book"))

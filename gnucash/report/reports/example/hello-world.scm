@@ -24,14 +24,15 @@
 ;; new reports for GnuCash.
 
 (define-module (gnucash reports example hello-world))
+
+(use-modules (gnucash engine))
 (use-modules (gnucash utilities)) 
-(use-modules (gnucash gnc-module))
-(use-modules (gnucash gettext))
+(use-modules (gnucash core-utils))
+(use-modules (gnucash app-utils))
+(use-modules (gnucash report))
+(use-modules (gnucash html))
 
 (debug-enable 'backtrace)
-
-(gnc:module-load "gnucash/report" 0)
-(gnc:module-load "gnucash/html" 0) ;for gnc-build-url
 
 ;; This function will generate a set of options that GnuCash
 ;; will use to display a dialog where the user can select
@@ -65,22 +66,18 @@
      (gnc:make-multichoice-option
       (N_ "Hello, World!") (N_ "Multi Choice Option")
       "b" (N_ "This is a multi choice option.") 'third
-      (list (list->vector
-             (list 'first
-                   (N_ "First Option")
-                   (N_ "Help for first option.")))
-            (list->vector
-             (list 'second
-                   (N_ "Second Option")
-                   (N_ "Help for second option.")))
-            (list->vector
-             (list 'third
-                   (N_ "Third Option")
-                   (N_ "Help for third option.")))
-            (list->vector
-             (list 'fourth
-                   (N_ "Fourth Options")
-                   (N_ "The fourth option rules!"))))))
+      (list (vector 'first
+                    (N_ "First Option")
+                    (N_ "Help for first option."))
+            (vector 'second
+                    (N_ "Second Option")
+                    (N_ "Help for second option."))
+            (vector 'third
+                    (N_ "Third Option")
+                    (N_ "Help for third option."))
+            (vector 'fourth
+                    (N_ "Fourth Options")
+                    (N_ "The fourth option rules!")))))
     
     ;; This is a string option. Users can type anything they want
     ;; as a value. The default value is "Hello, World". This is
@@ -157,13 +154,6 @@
       (list #xf6 #xff #xdb #xff)
       255
       #f))
-    (add-option
-     (gnc:make-color-option
-      (N_ "Hello, World!") (N_ "Text Color")
-      "f" (N_ "This is a color option.")
-      (list #x00 #x00 #x00 #xff)
-      255
-      #f))
     
     ;; This is an account list option. The user can select one
     ;; or (possibly) more accounts from the list of accounts
@@ -196,19 +186,16 @@
      (gnc:make-list-option
       (N_ "Hello Again") (N_ "A list option")
       "h" (N_ "This is a list option.")
-      (list 'good)
-      (list (list->vector
-             (list 'good
-                   (N_ "The Good")
-                   (N_ "Good option.")))
-            (list->vector
-             (list 'bad
-                   (N_ "The Bad")
-                   (N_ "Bad option.")))
-            (list->vector
-             (list 'ugly
-                   (N_ "The Ugly")
-                   (N_ "Ugly option."))))))
+      '(good)
+      (list (vector 'good
+                    (N_ "The Good")
+                    (N_ "Good option."))
+            (vector 'bad
+                    (N_ "The Bad")
+                    (N_ "Bad option."))
+            (vector 'ugly
+                    (N_ "The Ugly")
+                    (N_ "Ugly option.")))))
     
     ;; This option is for testing. When true, the report generates
     ;; an exception.
@@ -220,7 +207,22 @@
 Your reports probably shouldn't have an \
 option like this.") 
       #f))
-    
+
+    ;; This is a Radio Button option. The user can only select one 
+    ;; value from the list of buttons.
+    (add-option
+     (gnc:make-radiobutton-option
+      (N_ "Hello Again") "A Radio Button option" "z" (N_ "This is a Radio Button option.") 'good
+      (list (vector 'good
+                    (N_ "The Good")
+                    (N_ "Good option."))
+            (vector 'bad
+                    (N_ "The Bad")
+                    (N_ "Bad option."))
+            (vector 'ugly
+                    (N_ "The Ugly")
+                    (N_ "Ugly option.")))))
+
     (gnc:options-set-default-section options "Hello, World!")      
     options))
 
@@ -254,9 +256,9 @@ option like this.")
                          (op-value "Hello, World!" "Combo Date Option")))
         (num-val      (op-value "Hello, World!" "Number Option"))
         (bg-color-op  (get-op   "Hello, World!" "Background Color"))
-        (txt-color-op (get-op   "Hello, World!" "Text Color"))
         (accounts     (op-value "Hello Again"   "An account list option"))
         (list-val     (op-value "Hello Again"   "A list option"))
+        (radio-val    (op-value "Hello Again"   "A Radio Button option"))
         (crash-val    (op-value "Testing"       "Crash the report"))
         
         ;; document will be the HTML document that we return.
@@ -311,8 +313,7 @@ option like this.")
       
       (gnc:html-document-set-style!
        document "body" 
-       'attribute (list "bgcolor" (gnc:color-option->html bg-color-op))
-       'font-color (gnc:color-option->html txt-color-op))
+       'attribute (list "bgcolor" (gnc:color-option->html bg-color-op)))
       
       ;; the title of the report will be rendered by the 
       ;; selected style sheet.  All we have to do is set it in the
@@ -361,6 +362,11 @@ new, totally cool report, consult the mailing list ~a.")
          (gnc:html-markup/format
           (_ "The boolean option is ~a.")
           (gnc:html-markup-b (if bool-val (_ "true") (_ "false")))))
+
+        (gnc:html-markup-p
+         (gnc:html-markup/format
+          (_ "The radio button option is ~a.")
+          (gnc:html-markup-b radio-val)))
 
         (gnc:html-markup-p
          (gnc:html-markup/format
@@ -423,6 +429,8 @@ new, totally cool report, consult the mailing list ~a.")
           (let ((table (gnc:make-html-table)))
             (gnc:html-table-append-column! 
              table (map symbol->string list-val))
+            (gnc:html-table-set-style! table "table"
+             'attribute (list "style" "width:200px"))
             (gnc:html-table-set-caption! table 
                                          (_ "List items selected"))
             (gnc:html-document-add-object! document table))
@@ -455,11 +463,11 @@ new, totally cool report, consult the mailing list ~a.")
              (map 
               (lambda (acct)
                 (gnc:html-markup-anchor 
-		 (gnc-build-url URL-TYPE-REGISTER
-				     (string-append "account=" 
-						    (gnc-account-get-full-name
-						     acct))
-				     "")
+                 (gnc-build-url URL-TYPE-REGISTER
+                   (string-append "account=" 
+                     (gnc-account-get-full-name
+                        acct))
+                     "")
                  (xaccAccountGetName acct)))
               accounts))))
           (gnc:html-document-add-object!

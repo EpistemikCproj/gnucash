@@ -260,7 +260,7 @@ endif (WIN32)
 # ############################################################
 
 # SWIG
-find_package (SWIG 2.0.10 REQUIRED)
+find_package (SWIG 3.0.12 REQUIRED)
 include (${SWIG_USE_FILE})
 string(REGEX MATCH "^[0-9]+[.]" SWIG_MAJOR ${SWIG_VERSION})
 
@@ -510,14 +510,29 @@ set (Boost_FIND_QUIETLY ON)
 if (NOT DEFINED ${BOOST_ROOT})
   set(BOOST_ROOT $ENV{BOOST_ROOT})
 endif()
-find_package (Boost 1.54.0 REQUIRED COMPONENTS date_time regex locale filesystem system)
+find_package (Boost 1.67.0 COMPONENTS date_time regex locale filesystem system)
 
 if (Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
   set(HAVE_BOOST 1)
-else (Boost_FOUND)
-  message (SEND_ERROR "Boost 1.54.0 or later is not installed, and is required. Please install it and ensure that the following libraries are built: chrono, date_time, filesystem, log, program_options, regex, signals, system, and test.")
-endif (Boost_FOUND)
+else ()
+  find_package (Boost 1.60.0 REQUIRED COMPONENTS date_time regex locale filesystem system)
+  if (Boost_FOUND)
+    include (CheckIncludeFileCXX)
+    set(CMAKE_REQUIRED_FLAGS "-std=c++17")
+    set(CMAKE_REQUIRED_INCLUDES ${Boost_INCLUDE_DIR})
+    check_include_file_cxx("boost/locale.hpp" AUTO_PTR)
+    unset(CMAKE_REQUIRED_FLAGS)
+    unset(CMAKE_REQUIRED_INCLUDES)
+    if(AUTO_PTR)
+      include_directories(${Boost_INCLUDE_DIRS})
+      set(HAVE_BOOST 1)
+    endif()
+  endif()
+endif()
+if (NOT HAVE_BOOST)
+message (SEND_ERROR "A suitable Boost is not installed, and is required. GnuCash requires that Boost be compatible and compiled with C++17. Boost 1.67 is the first compatible release but some distributions have patched earlier ones to work with C++17. Please install it and ensure that the following libraries are built: date_time, filesystem, locale, and regex.")
+endif ()
 
 
 # Compiler flags
@@ -529,32 +544,25 @@ if (have_stringop_truncation)
     set(HAVE_STRINGOP_TRUNCATION TRUE)
 endif()
 
-if (SWIG_MAJOR LESS 3)
-check_cxx_compiler_flag(-Wno-register have_no_register)
-if (have_no_register)
-  set(REGISTER_CXXFLAG -Wno-register)
-else()
-  check_cxx_compiler_flag(-Wno-deprecated-register have_no_dep_register)
-  if (have_no_dep_register)
-    set(REGISTER_CXXFLAG -Wno-deprecated-register)
-  endif()
-endif()
-endif()
 add_definitions(-D_GNU_SOURCE)
 
 # Also, set the C++ version to c++11
-set(CMAKE_CXX_FLAGS "-std=gnu++11 ${CMAKE_CXX_FLAGS}")  # FIXME: should be -std=c++11
-
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS ON)
 
 if (UNIX)
   set( CMAKE_C_FLAGS "-Werror -Wdeclaration-after-statement -Wno-pointer-sign -Wall -Wmissing-prototypes -Wmissing-declarations -Wno-unused ${CMAKE_C_FLAGS}")
-  set( CMAKE_C_FLAGS "-Wno-error=deprecated-declarations -std=gnu11 -Wno-error=parentheses ${CMAKE_C_FLAGS}")
+  set( CMAKE_C_FLAGS "-Wno-error=deprecated-declarations -Wno-error=parentheses ${CMAKE_C_FLAGS}")
   set( CMAKE_CXX_FLAGS "-Werror -Wall -Wmissing-declarations -Wno-unused -Wno-error=parentheses ${CMAKE_CXX_FLAGS}")
   set( CMAKE_CXX_FLAGS "-Wno-error=deprecated-declarations ${REGISTER_CXXFLAG} ${CMAKE_CXX_FLAGS}")
   set( CMAKE_C_FLAGS_RELEASE "-O3 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 ${CMAKE_C_FLAGS}")
 endif (UNIX)
 if (MINGW)
-  set( CMAKE_C_FLAGS "-Werror -Wdeclaration-after-statement -Wno-pointer-sign -Wall -Wunused -Wmissing-prototypes -Wmissing-declarations  -Wno-unused -Wno-error=deprecated-declarations -std=gnu11 ${CMAKE_C_FLAGS}")
+  set( CMAKE_C_FLAGS "-Werror -Wdeclaration-after-statement -Wno-pointer-sign -Wall -Wunused -Wmissing-prototypes -Wmissing-declarations  -Wno-unused -Wno-error=deprecated-declarations ${CMAKE_C_FLAGS}")
   set( CMAKE_CXX_FLAGS "-DWINVER=0x0500 -D_EMULATE_GLIBC=0 ${CMAKE_CXX_FLAGS}") # Workaround for bug in gtest on mingw, see https://github.com/google/googletest/issues/893 and https://github.com/google/googletest/issues/920
 endif (MINGW)
 
@@ -860,7 +868,7 @@ configure_file(
 add_custom_target(uninstall
         COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
 
-set(_MODULES gnc-core-utils gnc-module gnc-backend-xml-utils)
+set(_MODULES gnc-core-utils gnc-engine gnc-app-utils gnc-module gnc-locale-tax gnc-backend-xml-utils gnucash-guile)
 
 if (WITH_SQL)
   list(APPEND _MODULES gnc-backend-sql)

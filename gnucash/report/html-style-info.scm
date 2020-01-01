@@ -21,6 +21,7 @@
 ;; Boston, MA  02110-1301,  USA       gnu@gnu.org
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(use-modules (ice-9 match))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; <html-markup-style-info> class 
@@ -35,12 +36,6 @@
 ;;  tag         : string for start tag
 ;;  attributes  : hash of attribute to value (unsafe!)
 ;;  attribute   : single attribute-value pair in a list 
-;;  font-face   : string for <font face="">
-;;  font-size   : string for <font size="">
-;;  font-color  : color (a valid HTML color spec)
-;;  closing-font-tag: private data (computed from font-face,
-;;                                  font-size, font-color)
-;;                    don't set directly, please!
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -48,10 +43,6 @@
   (make-record-type "<html-markup-style-info>"
                     '(tag 
                       attributes
-                      font-face 
-                      font-size 
-                      font-color
-		      closing-font-tag?
                       inheritable?)))
 
 (define gnc:html-markup-style-info?
@@ -62,34 +53,23 @@
 
 (define (gnc:make-html-markup-style-info . rest)
   (let ((retval (gnc:make-html-markup-style-info-internal 
-                 #f (make-hash-table) #f #f #f #f #t)))
+                 #f (make-hash-table) #t)))
     (apply gnc:html-markup-style-info-set! retval rest)
     retval))
 
 (define (gnc:html-markup-style-info-set! style . rest)
   (let loop ((arglist rest))
-    (if (and (list? arglist)
-             (not (null? arglist))
-             (not (null? (cdr arglist))))
-        (let* ((field (car arglist))
-               (value (cadr arglist)))
-          (if (eq? field 'attribute)
-              (if (list? value)
-                  (gnc:html-markup-style-info-set-attribute!
-                   style (car value) 
-		   (if (null? (cdr value))
-		       #f
-		       (cadr value))))
-	      (begin 
-		(if (memq field '(font-size font-face font-color))
-		    (gnc:html-markup-style-info-set-closing-font-tag!
-		     style
-		     (not (eq? value #f))))
-		(let ((modifier 
-                     (record-modifier <html-markup-style-info> field)))
-                (modifier style value))))
-          (loop (cddr arglist)))))
-  style)
+    (match arglist
+      (('attribute (key . val) . rest)
+       (gnc:html-markup-style-info-set-attribute!
+        style key (and (pair? val) (car val)))
+       (loop rest))
+
+      ((field value . rest)
+       ((record-modifier <html-markup-style-info> field) style value)
+       (loop rest))
+
+      (else style))))
 
 (define gnc:html-markup-style-info-tag
   (record-accessor <html-markup-style-info> 'tag))
@@ -102,43 +82,6 @@
 
 (define gnc:html-markup-style-info-set-attributes!
   (record-modifier <html-markup-style-info> 'attributes))
-
-(define gnc:html-markup-style-info-font-face
-  (record-accessor <html-markup-style-info> 'font-face))
-
-(define gnc:html-markup-style-info-set-font-face-internal!
-  (record-modifier <html-markup-style-info> 'font-face))
-
-(define (gnc:html-markup-style-info-set-font-face! record value)
-  (gnc:html-markup-style-info-set-closing-font-tag! record value)
-  (gnc:html-markup-style-info-set-font-face-internal! record value))
-
-(define gnc:html-markup-style-info-font-size
-  (record-accessor <html-markup-style-info> 'font-size))
-
-(define gnc:html-markup-style-info-set-font-size-internal!
-  (record-modifier <html-markup-style-info> 'font-size))
-
-(define (gnc:html-markup-style-info-set-font-size! record value)
-  (gnc:html-markup-style-info-set-closing-font-tag! record value)
-  (gnc:html-markup-style-info-set-font-size-internal! record value))
-
-(define gnc:html-markup-style-info-font-color
-  (record-accessor <html-markup-style-info> 'font-color))
-
-(define gnc:html-markup-style-info-set-font-color-internal!
-  (record-modifier <html-markup-style-info> 'font-color))
-
-(define (gnc:html-markup-style-info-set-font-color! record value)
-  (begin
-    (gnc:html-markup-style-info-set-closing-font-tag!
-     record (not (eq? value #f)))
-    (gnc:html-markup-style-info-set-font-color-internal! record value)))
-
-(define gnc:html-markup-style-info-closing-font-tag
-  (record-accessor <html-markup-style-info> 'closing-font-tag?))
-(define gnc:html-markup-style-info-set-closing-font-tag!
-  (record-modifier <html-markup-style-info> 'closing-font-tag?))
 
 (define gnc:html-markup-style-info-inheritable? 
   (record-accessor <html-markup-style-info> 'inheritable?))
@@ -172,18 +115,6 @@
         (lambda (k v) (hash-set! ht k v))
         (gnc:html-markup-style-info-attributes s1))
        ht)
-     ;; font face
-     (or (gnc:html-markup-style-info-font-face s1)
-         (gnc:html-markup-style-info-font-face s2))
-     ;; font size
-     (or (gnc:html-markup-style-info-font-size s1)
-         (gnc:html-markup-style-info-font-size s2))
-     ;; color
-     (or (gnc:html-markup-style-info-font-color s1)
-         (gnc:html-markup-style-info-font-color s2))
-     ;; closing font tag
-     (or (gnc:html-markup-style-info-closing-font-tag s1)
-         (gnc:html-markup-style-info-closing-font-tag s2))
      ;; inheritable (get this always from child)
      (gnc:html-markup-style-info-inheritable? s1)))))
 
@@ -361,32 +292,26 @@
               (and (gnc:html-data-style-info? s)
                    (gnc:html-data-style-info-inheritable? s)))
           s #f)))
-  
+
   (define (fetch-worker style antecedents)
-    (if (null? antecedents)
-        style
-        (let ((parent (car antecedents)))
-          (if (not parent)
-              (fetch-worker style (cdr antecedents))
-              (if (gnc:html-style-table-compiled? parent)
-                  (gnc:html-style-info-merge 
-                   style 
-                   (hash-ref (gnc:html-style-table-inheritable parent) markup))
-                  (fetch-worker 
-                   (gnc:html-style-info-merge 
-                    style (get-inheritable-style 
-                           (gnc:html-style-table-primary parent)))
-                   (cdr antecedents)))))))
+    (cond
+     ((null? antecedents) style)
+     ((not (car antecedents)) (fetch-worker style (cdr antecedents)))
+     ((gnc:html-style-table-compiled? (car antecedents))
+      (gnc:html-style-info-merge
+       style (hash-ref (gnc:html-style-table-inheritable (car antecedents)) markup)))
+     (else
+      (fetch-worker
+       (gnc:html-style-info-merge
+        style (get-inheritable-style
+               (gnc:html-style-table-primary (car antecedents))))
+       (cdr antecedents)))))
 
   (if (and table (gnc:html-style-table-compiled? table))
       (hash-ref (gnc:html-style-table-compiled table) markup)
-      (fetch-worker 
+      (fetch-worker
        (and table (hash-ref (gnc:html-style-table-primary table) markup))
        antecedents)))
 
 (define (gnc:html-style-table-set! table markup style-info)
   (hash-set! (gnc:html-style-table-primary table) markup style-info))
-
-
-
-

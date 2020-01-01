@@ -22,6 +22,7 @@
 ;; Boston, MA  02110-1301,  USA       gnu@gnu.org
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(use-modules (gnucash engine))
 (use-modules (gnucash utilities))
 
 ;; returns a list with n #f (empty cell) values 
@@ -91,29 +92,17 @@
 
 (define (gnc:owner-report-text owner acc)
   (let* ((end-owner (gncOwnerGetEndOwner owner))
-	 (type (gncOwnerGetType end-owner))
-	 (ref #f))
-
-    (cond
-      ((eqv? type GNC-OWNER-CUSTOMER)
-       (set! ref "owner=c:"))
-
-      ((eqv? type GNC-OWNER-VENDOR)
-       (set! ref "owner=v:"))
-
-      ((eqv? type GNC-OWNER-EMPLOYEE)
-       (set! ref "owner=e:"))
-
-      (else (set! ref "unknown-type=")))
-
-    (if ref
-	(begin
-	  (set! ref (string-append ref (gncOwnerReturnGUID end-owner)))
-	  (if (not (null? acc))
-	      (set! ref (string-append ref "&acct="
-				       (gncAccountGetGUID acc))))
-	  (gnc-build-url URL-TYPE-OWNERREPORT ref ""))
-	ref)))
+         (type (gncOwnerGetType end-owner)))
+    (gnc-build-url
+     URL-TYPE-OWNERREPORT
+     (string-append
+      (cond ((eqv? type GNC-OWNER-CUSTOMER) "owner=c:")
+            ((eqv? type GNC-OWNER-VENDOR) "owner=v:")
+            ((eqv? type GNC-OWNER-EMPLOYEE) "owner=e:")
+            (else "unknown-type="))
+      (gncOwnerReturnGUID end-owner)
+      (if (null? acc) "" (string-append "&acct=" (gncAccountGetGUID acc))))
+     "")))
 
 ;; Make a new report and return the anchor to it. The new report of
 ;; type 'reportname' will have the option values copied from
@@ -190,29 +179,10 @@
      ((null? colors)    (lp (1+ i) (cons (car base-colors) result) (cdr base-colors)))
      (else              (lp (1+ i) (cons (car colors) result) (cdr colors))))))
 
-;; Appends a horizontal ruler to a html-table with the specified
-;; colspan at, optionally, the specified column.
-(define (gnc:html-table-append-ruler/at! table colskip colspan)
-  (define empty-cell '())
-  (gnc:html-table-append-row! 
-   table
-   (append (make-list colskip empty-cell)
-    (list
-     (gnc:make-html-table-cell/size
-      1 colspan (gnc:make-html-text (gnc:html-markup-hr)))))))
-     
-(define (gnc:html-table-append-ruler/at/markup! table markup colskip colspan)
-  (define empty-cell "")
-  (gnc:html-table-append-row/markup! 
-   table
-   markup
-   (append (make-list colskip empty-cell)
-    (list
-     (gnc:make-html-table-cell/size
-      1 colspan (gnc:make-html-text (gnc:html-markup-hr)))))))
-
 (define (gnc:html-table-append-ruler! table colspan)
-  (gnc:html-table-append-ruler/at! table 0 colspan))
+  (gnc:html-table-append-row!
+   table (list (gnc:make-html-table-cell/size
+                1 colspan (gnc:make-html-text (gnc:html-markup-hr))))))
 
 ;; Create a html-table of all exchange rates. The report-commodity is
 ;; 'common-commodity', the exchange rates are given through the

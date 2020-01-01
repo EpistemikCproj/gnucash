@@ -48,8 +48,7 @@
 #include "gnc-warnings.h"
 #include "swig-runtime.h"
 #include "guile-mappings.h"
-#include "guile-util.h"
-#include "engine-helpers-guile.h"
+#include "gnc-engine-guile.h"
 
 
 #define DIALOG_PRICE_DB_CM_CLASS "dialog-price-edit-db"
@@ -205,6 +204,7 @@ gnc_prices_dialog_remove_clicked (GtkWidget *widget, gpointer data)
         g_list_foreach(price_list, (GFunc)remove_helper, pdb_dialog->price_db);
     }
     g_list_free(price_list);
+    gnc_gui_refresh_all ();
     LEAVE(" ");
 }
 
@@ -504,6 +504,7 @@ gnc_prices_dialog_remove_old_clicked (GtkWidget *widget, gpointer data)
         }
         g_list_free (comm_list);
     }
+    gnc_gui_refresh_all ();
     gtk_widget_destroy (pdb_dialog->remove_dialog);
     LEAVE(" ");
 }

@@ -11,7 +11,7 @@ set (report_HEADERS
 # Command to generate the swig-report.c wrapper file
 gnc_add_swig_guile_command (swig-report-c
     SWIG_REPORT_C swig-report.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/report.i ${report_HEADERS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/report.i "" ${report_HEADERS}
 )
 
 set (report_SOURCES
@@ -27,10 +27,15 @@ add_library (gncmod-report
 
 target_compile_definitions(gncmod-report PRIVATE -DG_LOG_DOMAIN=\"gnc.report.core\")
 
-target_link_libraries(gncmod-report gnc-module gncmod-app-utils PkgConfig::GTK3 ${GUILE_LDFLAGS})
+target_link_libraries(gncmod-report
+    gnc-module
+    gnc-app-utils
+    gnucash-guile
+    PkgConfig::GTK3
+    ${GUILE_LDFLAGS})
 
 target_include_directories (gncmod-report
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} 
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 
@@ -47,11 +52,7 @@ install(FILES ${report_HEADERS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/gnucash)
 
 # Scheme
 
-set (report_SCHEME
-    report.scm
-)
-
-set (report_SCHEME_2
+set (report_SCHEME_1
     commodity-utilities.scm
     html-acct-table.scm
     html-chart.scm
@@ -74,6 +75,10 @@ set (report_SCHEME_2
     trep-engine.scm
 )
 
+set (report_SCHEME_2
+    report.scm
+)
+
 set (report_eguile_parts_SCHEME
     eguile-utilities.scm
     eguile-html-utilities.scm
@@ -84,25 +89,25 @@ set (report_eguile_SCHEME
 )
 
 set(GUILE_DEPENDS
-  gncmod-html
+  scm-gnc-html
   scm-gnome-utils
   gncmod-report
   scm-app-utils
-  scm-scm
+  scm-engine
   scm-gnc-module
   guile-json
   )
 
 gnc_add_scheme_targets(scm-report-1
-  "${report_SCHEME}"
-  "gnucash"
+  "${report_SCHEME_1}"
+  "gnucash/report"
   "${GUILE_DEPENDS}"
   FALSE
 )
 
 gnc_add_scheme_targets(scm-report-2
   "${report_SCHEME_2}"
-  "gnucash/report"
+  "gnucash"
   scm-report-1
   TRUE
 )
@@ -110,7 +115,7 @@ gnc_add_scheme_targets(scm-report-2
 gnc_add_scheme_targets(scm-report-eguile-parts
   "${report_eguile_parts_SCHEME}"
   "gnucash/eguile"
-  scm-report-1
+  scm-report-2
   FALSE
 )
 
@@ -125,7 +130,7 @@ gnc_add_scheme_targets(scm-report-eguile
 gnc_add_scheme_deprecated_module ("gnucash report eguile-gnc" "gnucash eguile" "scm-report-eguile" "")
 gnc_add_scheme_deprecated_module ("gnucash report eguile-html-utilities" "gnucash eguile" "scm-report-eguile" "")
 gnc_add_scheme_deprecated_module ("gnucash report eguile-utilities" "gnucash eguile" "scm-report-eguile" "")
-gnc_add_scheme_deprecated_module ("gnucash report report-system" "gnucash report" "scm-report-1" "")
+gnc_add_scheme_deprecated_module ("gnucash report report-system" "gnucash report" "scm-report-2" "")
 
 gnc_add_scheme_deprecated_module ("gnucash report business-reports" "" "" "")
 gnc_add_scheme_deprecated_module ("gnucash report report-system collectors" "" "" "")

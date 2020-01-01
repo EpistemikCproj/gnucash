@@ -1,5 +1,5 @@
-(use-modules (gnucash gnc-module))
-(gnc:module-begin-syntax (gnc:module-load "gnucash/app-utils" 0))
+(use-modules (gnucash engine))
+(use-modules (gnucash app-utils))
 (use-modules (tests test-engine-extras))
 (use-modules (gnucash reports standard transaction))
 (use-modules (gnucash reports standard reconcile-report))
@@ -347,6 +347,12 @@
       (let ((sxml (options->sxml options "transaction filter not.s? regex")))
         (test-equal "transaction filter in bank to 'not.s?' and switch regex, sum = -$23.00"
           '("-$23.00")
+          (get-row-col sxml -1 -1)))
+
+      (set-option! options "Filter" "Transaction Filter excludes matched strings" #t)
+      (let ((sxml (options->sxml options "negate transaction filter not.s?")))
+        (test-equal "transaction filter in bank to 'not.s?' and switch regex, sum = -$23.00"
+          '("$24.00")
           (get-row-col sxml -1 -1)))
 
       ;; Test Reconcile Status Filters
